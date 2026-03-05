@@ -6,6 +6,7 @@ All of the models are stored in this module
 
 import logging
 from flask_sqlalchemy import SQLAlchemy
+from enum import Enum
 
 logger = logging.getLogger("flask.app")
 
@@ -17,7 +18,15 @@ class DataValidationError(Exception):
     """Used for an data validation errors when deserializing"""
 
 
-class YourResourceModel(db.Model):
+class ItemCondition(Enum):
+    """Enumeration of valid inventory item conditions"""
+
+    NEW = "new"
+    OPEN_BOX = "open_box"
+    USED = "used"
+
+
+class Inventory(db.Model):
     """
     Class that represents a YourResourceModel
     """
@@ -29,6 +38,24 @@ class YourResourceModel(db.Model):
     name = db.Column(db.String(63))
 
     # Todo: Place the rest of your schema here...
+
+    product_id = db.Column(db.String(64), nullable=False)
+
+    quantity_on_hand = db.Column(db.Integer, nullable=False, default=0)
+
+    restock_level = db.Column(db.Integer, nullable=False, default=0)
+
+    condition = db.Column(
+        db.Enum(ItemCondition), nullable=False, server_default=ItemCondition.NEW.name
+    )
+
+    # database auditing fields
+
+    created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+
+    last_updated = db.Column(
+        db.DateTime, nullable=False, default=db.func.now(), onupdate=db.func.now()
+    )
 
     def __repr__(self):
         return f"<YourResourceModel {self.name} id=[{self.id}]>"
