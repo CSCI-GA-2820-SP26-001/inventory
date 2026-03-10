@@ -32,11 +32,12 @@ from service.common import status  # HTTP Status Codes
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
-    return (
-        "Reminder: return some useful information in json format about the service here",
-        status.HTTP_200_OK,
-    )
+    """Root URL response - returns service info as JSON."""
+    return jsonify(
+        name=app.config["SERVICE_NAME"],
+        version=app.config["VERSION"],
+        url=request.base_url.rstrip("/"),
+    ), status.HTTP_200_OK
 
 
 ######################################################################
