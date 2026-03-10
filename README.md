@@ -1,69 +1,122 @@
-# NYU DevOps Project Template
+# Inventory Service
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Python](https://img.shields.io/badge/Language-Python-blue.svg)](https://python.org/)
+[![Python](https://img.shields.io/badge/Language-Python_3.12-blue.svg)](https://python.org/)
 
-This is a skeleton you can use to start your projects.
-
-**Note:** _Feel free to overwrite this `README.md` file with the one that describes your project._
+A REST API service for managing inventory items. Built with Flask and SQLAlchemy.
 
 ## Overview
 
-This project template contains starter code for your class project. The `/service` folder contains your `models.py` file for your model and a `routes.py` file for your service. The `/tests` folder has test case starter code for testing the model and the service separately. All you need to do is add your functionality. You can use the [lab-flask-tdd](https://github.com/nyu-devops/lab-flask-tdd) for code examples to copy from.
+This service provides CRUD operations for inventory records. Each inventory item has a name, product ID, quantity on hand, restock level, and condition (`new`, `open_box`, or `used`). The `/service` folder contains the `Inventory` model and REST routes; `/tests` contains test suites for the model and service.
 
-## Automatic Setup
+## Prerequisites
 
-The best way to use this repo is to start your own repo using it as a git template. To do this just press the green **Use this template** button in GitHub and this will become the source for your repository.
+- Python 3.12
+- Pipenv (recommended) or pip
 
-## Manual Setup
+## Setup
 
-You can also clone this repository and then copy and paste the starter code into your project repo folder on your local computer. Be careful not to copy over your own `README.md` file so be selective in what you copy.
+### Using this repo as a template
 
-There are 4 hidden files that you will need to copy manually if you use the Mac Finder or Windows Explorer to copy files from this folder into your repo folder.
+Press the **Use this template** button on GitHub to create your own repository from this template.
 
-These should be copied using a bash shell as follows:
+### Local setup
+
+1. Clone the repository:
+   ```bash
+   git clone <repo-url>
+   cd inventory
+   ```
+
+2. Copy environment configuration:
+   ```bash
+   cp dot-env-example .env
+   ```
+   Edit `.env` if needed (e.g. database URL).
+
+3. Install dependencies:
+   ```bash
+   pipenv install --dev
+   ```
+   Or with Make:
+   ```bash
+   make install
+   ```
+
+4. Optional — copy hidden files if you moved files manually:
+   ```bash
+   cp .gitignore   ../<your_repo_folder>/
+   cp .flaskenv    ../<your_repo_folder>/
+   cp .gitattributes ../<your_repo_folder>/
+   ```
+
+## Running the Service
 
 ```bash
-    cp .gitignore  ../<your_repo_folder>/
-    cp .flaskenv ../<your_repo_folder>/
-    cp .gitattributes ../<your_repo_folder>/
+honcho start
+# or
+make run
 ```
 
-## Contents
+The API will be available at the URL configured in `.flaskenv` (default typically `http://localhost:8000`).
 
-The project contains the following:
+## Development
+
+| Command     | Description                    |
+|------------|--------------------------------|
+| `make install` | Install Python dependencies   |
+| `make lint`    | Run flake8 and pylint         |
+| `make test`    | Run pytest with coverage      |
+| `make run`     | Start the service (honcho)    |
+| `make secret`  | Generate a secret hex key     |
+
+## Project Layout
 
 ```text
-.gitignore          - this will ignore vagrant and other metadata files
-.flaskenv           - Environment variables to configure Flask
-.gitattributes      - File to gix Windows CRLF issues
-.devcontainers/     - Folder with support for VSCode Remote Containers
-dot-env-example     - copy to .env to use environment variables
-pyproject.toml      - Poetry list of Python libraries required by your code
+.gitignore          - Ignores Vagrant and other metadata
+.flaskenv           - Environment variables for Flask
+.gitattributes      - Line ending handling (e.g. CRLF)
+.devcontainer/      - VSCode Remote Containers support
+dot-env-example     - Copy to .env for local config
+Pipfile             - Python dependencies (Pipenv)
+Makefile            - Development and build commands
 
-service/                   - service python package
-├── __init__.py            - package initializer
-├── config.py              - configuration parameters
-├── models.py              - module with business models
-├── routes.py              - module with service routes
-└── common                 - common code package
-    ├── cli_commands.py    - Flask command to recreate all tables
-    ├── error_handlers.py  - HTTP error handling code
-    ├── log_handlers.py    - logging setup code
-    └── status.py          - HTTP status constants
+service/                    - Main service package
+├── __init__.py             - Package initializer
+├── config.py               - Configuration
+├── models.py               - Inventory model and ItemCondition enum
+├── routes.py               - REST API routes
+└── common/
+    ├── cli_commands.py     - Flask CLI (e.g. recreate tables)
+    ├── error_handlers.py   - HTTP error handling
+    ├── log_handlers.py     - Logging setup
+    └── status.py           - HTTP status constants
 
-tests/                     - test cases package
-├── __init__.py            - package initializer
-├── factories.py           - Factory for testing with fake objects
-├── test_cli_commands.py   - test suite for the CLI
-├── test_models.py         - test suite for business models
-└── test_routes.py         - test suite for service routes
+tests/
+├── __init__.py
+├── factories.py            - Test factories
+├── test_cli_commands.py    - CLI tests
+├── test_models.py          - Model tests
+└── test_routes.py          - Route tests
 ```
+
+## API Summary
+
+The service exposes a REST API to create, read, update, and delete **Inventory** records. Each record includes:
+
+- **name** — Item name
+- **product_id** — Product identifier
+- **quantity_on_hand** — Current stock
+- **restock_level** — Threshold for restocking
+- **condition** — One of: `new`, `open_box`, `used`
+- **created_at** / **last_updated** — Timestamps (managed by the service)
+
+Use the root URL (`/`) for a simple service description. Full CRUD endpoints are defined in `service/routes.py`.
 
 ## License
 
 Copyright (c) 2016, 2025 [John Rofrano](https://www.linkedin.com/in/JohnRofrano/). All rights reserved.
 
-Licensed under the Apache License. See [LICENSE](LICENSE)
+Licensed under the Apache License. See [LICENSE](LICENSE).
 
-This repository is part of the New York University (NYU) masters class: **CSCI-GA.2820-001 DevOps and Agile Methodologies** created and taught by [John Rofrano](https://cs.nyu.edu/~rofrano/), Adjunct Instructor, NYU Courant Institute, Graduate Division, Computer Science, and NYU Stern School of Business.
+This repository is part of the New York University (NYU) course **CSCI-GA.2820-001 DevOps and Agile Methodologies**, created and taught by [John Rofrano](https://cs.nyu.edu/~rofrano/), Adjunct Instructor, NYU Courant Institute, Graduate Division, Computer Science, and NYU Stern School of Business.
