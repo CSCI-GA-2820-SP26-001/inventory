@@ -23,7 +23,7 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import YourResourceModel
+from service.models import Inventory, ItemCondition
 from service.common import status  # HTTP Status Codes
 
 
@@ -33,11 +33,14 @@ from service.common import status  # HTTP Status Codes
 @app.route("/")
 def index():
     """Root URL response - returns service info as JSON."""
-    return jsonify(
-        name=app.config["SERVICE_NAME"],
-        version=app.config["VERSION"],
-        url=request.base_url.rstrip("/"),
-    ), status.HTTP_200_OK
+    return (
+        jsonify(
+            name=app.config["SERVICE_NAME"],
+            version=app.config["VERSION"],
+            url=request.base_url.rstrip("/"),
+        ),
+        status.HTTP_200_OK,
+    )
 
 
 ######################################################################
@@ -45,3 +48,25 @@ def index():
 ######################################################################
 
 # Todo: Place your REST API code here ...
+
+######################################################################
+# DELETE AN Inventory Item
+######################################################################
+
+
+@app.route("/inventory/<int:product_id>", methods=["DELETE"])
+def delete_inventory_item(product_id):
+    """
+    Delete an inventory item
+    This endpoint deletes an inventory item based on product id
+    """
+    app.logger.info("Request to delete an inventory item with id [%s]", product_id)
+
+    # delete item if exists
+    inventory = Inventory.find(product_id)
+    if inventory:
+        app.logger.info("Item with ID: %d found.", product_id)
+        inventory.delete()
+
+    app.logger.info("Inventory with ID: %d delete complete.", product_id)
+    return {}, status.HTTP_204_NO_CONTENT
