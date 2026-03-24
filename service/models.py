@@ -37,8 +37,6 @@ class Inventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(63))
 
-    # Todo: Place the rest of your schema here...
-
     product_id = db.Column(db.String(64), nullable=False)
 
     quantity_on_hand = db.Column(db.Integer, nullable=False, default=0)
@@ -99,7 +97,18 @@ class Inventory(db.Model):
 
     def serialize(self):
         """Serializes a YourResourceModel into a dictionary"""
-        return {"id": self.id, "name": self.name}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "product_id": self.product_id,
+            "quantity_on_hand": self.quantity_on_hand,
+            "restock_level": self.restock_level,
+            "condition": self.condition.value,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_updated": (
+                self.last_updated.isoformat() if self.last_updated else None
+            ),
+        }
 
     def deserialize(self, data):
         """
@@ -110,6 +119,12 @@ class Inventory(db.Model):
         """
         try:
             self.name = data["name"]
+            self.product_id = data["product_id"]
+            self.quantity_on_hand = int(data["quantity_on_hand"])
+            self.restock_level = int(data["restock_level"])
+            self.condition = ItemCondition(data["condition"])
+        except ValueError as error:
+            raise DataValidationError("Invalid value: " + str(error)) from error
         except AttributeError as error:
             raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:
