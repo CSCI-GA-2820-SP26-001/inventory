@@ -21,7 +21,7 @@ import os
 import logging
 from unittest import TestCase
 from wsgi import app
-from service.models import Inventory, DataValidationError, db
+from service.models import Inventory, ItemCondition, DataValidationError, db
 from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -63,11 +63,13 @@ class TestInventoryModel(TestCase):
     #  T E S T   C A S E S
     ######################################################################
 
-    def test_create_inventory(self):
-        """It should create an Inventory"""
+    # Todo: Add your test cases here...
+
+    def test_delete_an_inventory(self):
+        """It should delete an Inventory item"""
+        # Todo: Remove this test case example
         inventory = InventoryFactory()
         inventory.create()
-        self.assertIsNotNone(inventory.id)
         found = Inventory.all()
         self.assertEqual(len(found), 1)
         data = Inventory.find(inventory.id)

@@ -23,7 +23,7 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, DataValidationError
+from service.models import Inventory, ItemCondition
 from service.common import status  # HTTP Status Codes
 
 
@@ -47,41 +47,26 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
+# Todo: Place your REST API code here ...
 
-def check_content_type(content_type):
-    """Checks that the media type is correct"""
-    if request.mimetype != content_type:
-        abort(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            f"Content-Type must be {content_type}",
-        )
+######################################################################
+# DELETE AN Inventory Item
+######################################################################
 
 
-@app.route("/inventory", methods=["POST"])
-def create_inventory():
-    """Create an Inventory item"""
-    app.logger.info("Request to Create an Inventory item...")
-    check_content_type("application/json")
+@app.route("/inventory/<int:product_id>", methods=["DELETE"])
+def delete_inventory_item(product_id):
+    """
+    Delete an inventory item
+    This endpoint deletes an inventory item based on product id
+    """
+    app.logger.info("Request to delete an inventory item with id [%s]", product_id)
 
-    data = request.get_json()
-    app.logger.info("Processing: %s", data)
-
-    inventory = Inventory()
-    try:
-        inventory.deserialize(data)
-    except DataValidationError as error:
-        abort(status.HTTP_400_BAD_REQUEST, str(error))
-
-    inventory.create()
-    app.logger.info("Inventory item with new id [%s] saved!", inventory.id)
-
-    location_url = url_for("get_inventory", inventory_id=inventory.id, _external=True)
-    return (
-        jsonify(inventory.serialize()),
-        status.HTTP_201_CREATED,
-        {"Location": location_url},
-    )
-
+    # delete item if exists
+    inventory = Inventory.find(product_id)
+    if inventory:
+        app.logger.info("Item with ID: %d found.", product_id)
+        inventory.delete()
 
 @app.route("/inventory/<int:inventory_id>", methods=["GET"])
 def get_inventory(inventory_id):

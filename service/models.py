@@ -103,7 +103,7 @@ class Inventory(db.Model):
             "product_id": self.product_id,
             "quantity_on_hand": self.quantity_on_hand,
             "restock_level": self.restock_level,
-            "condition": self.condition.value,
+            "condition": condition_val,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_updated": (
                 self.last_updated.isoformat() if self.last_updated else None
@@ -123,14 +123,12 @@ class Inventory(db.Model):
             self.quantity_on_hand = int(data["quantity_on_hand"])
             self.restock_level = int(data["restock_level"])
             self.condition = ItemCondition(data["condition"])
-        except ValueError as error:
-            raise DataValidationError("Invalid value: " + str(error)) from error
-        except AttributeError as error:
-            raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:
             raise DataValidationError(
                 "Invalid Inventory: missing " + error.args[0]
             ) from error
+        except ValueError as error:
+            raise DataValidationError("Invalid value: " + str(error)) from error
         except TypeError as error:
             raise DataValidationError(
                 "Invalid Inventory: body of request contained bad or no data "

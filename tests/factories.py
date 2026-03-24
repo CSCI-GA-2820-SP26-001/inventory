@@ -3,8 +3,8 @@ Test Factory to make fake objects for testing
 """
 
 import factory
-from factory.fuzzy import FuzzyChoice, FuzzyInteger
 from datetime import datetime
+from factory.fuzzy import FuzzyChoice, FuzzyInteger
 
 from service.models import Inventory, ItemCondition
 
@@ -13,6 +13,8 @@ class InventoryFactory(factory.Factory):
     """Factory for creating Inventory model instances for tests"""
 
     class Meta:  # pylint: disable=too-few-public-methods
+        """Maps factory to data model"""
+
         model = Inventory
 
     id = factory.Sequence(lambda n: n)

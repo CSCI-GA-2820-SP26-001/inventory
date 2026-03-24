@@ -25,11 +25,13 @@ from unittest import TestCase
 from wsgi import app
 from service.common import status
 from service.models import db, Inventory
-from .factories import InventoryFactory
+from tests.factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
+
+BASE_URL = "/inventory"
 
 
 ######################################################################
@@ -63,6 +65,25 @@ class TestYourResourceService(TestCase):
     def tearDown(self):
         """This runs after each test"""
         db.session.remove()
+
+    ############################################################
+    # Utility function to bulk create inventory items
+    ############################################################
+    def _create_inventory_items(self, count: int = 1) -> list:
+        """Factory method to create inventory items in bulk"""
+        items = []
+        for _ in range(count):
+            test_item = InventoryFactory()
+            response = self.client.post(BASE_URL, json=test_item.serialize())
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_201_CREATED,
+                "Could not create test inventory item",
+            )
+            new_item = response.get_json()
+            test_item.id = new_item["id"]
+            items.append(test_item)
+        return items
 
     ######################################################################
     #  P L A C E   T E S T   C A S E S   H E R E
