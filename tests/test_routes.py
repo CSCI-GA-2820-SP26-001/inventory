@@ -153,3 +153,28 @@ class TestYourResourceService(TestCase):
         """It should return 404 for an Inventory record that does not exist"""
         resp = self.client.get("/inventory/0")
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+# ----------------------------------------------------------
+# TEST LIST
+# ----------------------------------------------------------
+def test_list_inventory(self):
+    """It should list all Inventory items"""
+    self._create_inventory_items(3)
+
+    response = self.client.get(BASE_URL)
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    data = response.get_json()
+    self.assertIsInstance(data, list)
+    self.assertEqual(len(data), 3)
+
+
+def test_list_inventory_empty(self):
+    """It should return an empty list when there are no inventory items"""
+    response = self.client.get(BASE_URL)
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    data = response.get_json()
+    self.assertIsInstance(data, list)
+    self.assertEqual(len(data), 0)

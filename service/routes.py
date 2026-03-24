@@ -33,11 +33,14 @@ from service.common import status  # HTTP Status Codes
 @app.route("/")
 def index():
     """Root URL response - returns service info as JSON."""
-    return jsonify(
-        name=app.config["SERVICE_NAME"],
-        version=app.config["VERSION"],
-        url=request.base_url.rstrip("/"),
-    ), status.HTTP_200_OK
+    return (
+        jsonify(
+            name=app.config["SERVICE_NAME"],
+            version=app.config["VERSION"],
+            url=request.base_url.rstrip("/"),
+        ),
+        status.HTTP_200_OK,
+    )
 
 
 ######################################################################
@@ -90,3 +93,19 @@ def get_inventory(inventory_id):
             f"Inventory with id '{inventory_id}' was not found.",
         )
     return jsonify(inventory.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# LIST ALL INVENTORY ITEMS
+######################################################################
+@app.route("/inventory", methods=["GET"])
+def list_inventory():
+    """Returns all Inventory items"""
+    app.logger.info("Request for inventory list")
+
+    inventory = Inventory.all()
+
+    results = [item.serialize() for item in inventory]
+
+    app.logger.info("Returning %d inventory items", len(results))
+    return jsonify(results), status.HTTP_200_OK

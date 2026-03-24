@@ -112,3 +112,18 @@ class TestInventoryModel(TestCase):
             "condition": "new",
         }
         self.assertRaises(DataValidationError, inventory.deserialize, payload)
+
+
+def test_list_all_inventory(self):
+    """It should List all Inventory items in the database"""
+    items = Inventory.all()
+    self.assertEqual(items, [])
+
+    # Create 5 Inventory items
+    for _ in range(5):
+        item = InventoryFactory()
+        item.create()
+
+    # See if we get back 5 items
+    items = Inventory.all()
+    self.assertEqual(len(items), 5)
