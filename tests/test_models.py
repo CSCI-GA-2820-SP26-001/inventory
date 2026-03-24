@@ -21,7 +21,7 @@ import os
 import logging
 from unittest import TestCase
 from wsgi import app
-from service.models import Inventory, DataValidationError, db
+from service.models import Inventory, ItemCondition, DataValidationError, db
 from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -63,52 +63,15 @@ class TestInventoryModel(TestCase):
     #  T E S T   C A S E S
     ######################################################################
 
-    def test_create_inventory(self):
-        """It should create an Inventory"""
+    # Todo: Add your test cases here...
+
+    def test_delete_an_inventory(self):
+        """It should delete an Inventory item"""
+        # Todo: Remove this test case example
         inventory = InventoryFactory()
         inventory.create()
-        self.assertIsNotNone(inventory.id)
         found = Inventory.all()
         self.assertEqual(len(found), 1)
-        data = Inventory.find(inventory.id)
-        self.assertEqual(data.name, inventory.name)
-
-    def test_serialize_inventory(self):
-        """It should serialize an Inventory"""
-        inventory = InventoryFactory()
-        inventory.create()
-        data = inventory.serialize()
-        self.assertEqual(data["id"], inventory.id)
-        self.assertEqual(data["name"], inventory.name)
-        self.assertEqual(data["product_id"], inventory.product_id)
-        self.assertEqual(data["quantity_on_hand"], inventory.quantity_on_hand)
-        self.assertEqual(data["restock_level"], inventory.restock_level)
-        self.assertEqual(data["condition"], inventory.condition.value)
-
-    def test_deserialize_inventory(self):
-        """It should deserialize an Inventory from POST-like payload"""
-        inventory = Inventory()
-        payload = {
-            "name": "keyboard",
-            "product_id": "sku-123",
-            "quantity_on_hand": 8,
-            "restock_level": 3,
-            "condition": "new",
-        }
-        inventory.deserialize(payload)
-        self.assertEqual(inventory.name, payload["name"])
-        self.assertEqual(inventory.product_id, payload["product_id"])
-        self.assertEqual(inventory.quantity_on_hand, payload["quantity_on_hand"])
-        self.assertEqual(inventory.restock_level, payload["restock_level"])
-        self.assertEqual(inventory.condition.value, payload["condition"])
-
-    def test_deserialize_inventory_missing_field(self):
-        """It should not deserialize an Inventory with missing fields"""
-        inventory = Inventory()
-        payload = {
-            "name": "keyboard",
-            "quantity_on_hand": 8,
-            "restock_level": 3,
-            "condition": "new",
-        }
-        self.assertRaises(DataValidationError, inventory.deserialize, payload)
+        # delete the item and make sure it isn't in the database
+        inventory.delete()
+        self.assertEqual(len(Inventory.all()), 0)

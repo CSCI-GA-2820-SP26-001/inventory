@@ -23,7 +23,7 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, ItemCondition, DataValidationError
+from service.models import Inventory, ItemCondition
 from service.common import status  # HTTP Status Codes
 
 
@@ -33,97 +33,40 @@ from service.common import status  # HTTP Status Codes
 @app.route("/")
 def index():
     """Root URL response - returns service info as JSON."""
-    return jsonify(
-        name=app.config["SERVICE_NAME"],
-        version=app.config["VERSION"],
-        url=request.base_url.rstrip("/"),
-    ), status.HTTP_200_OK
+    return (
+        jsonify(
+            name=app.config["SERVICE_NAME"],
+            version=app.config["VERSION"],
+            url=request.base_url.rstrip("/"),
+        ),
+        status.HTTP_200_OK,
+    )
 
 
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
+# Todo: Place your REST API code here ...
 
-def check_content_type(content_type):
-    """Checks that the media type is correct"""
-    if request.mimetype != content_type:
-        abort(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            f"Content-Type must be {content_type}",
-        )
+######################################################################
+# DELETE AN Inventory Item
+######################################################################
 
 
-@app.route("/inventory", methods=["POST"])
-def create_inventory():
-    """Create an Inventory item"""
-    app.logger.info("Request to Create an Inventory item...")
-    check_content_type("application/json")
+@app.route("/inventory/<int:product_id>", methods=["DELETE"])
+def delete_inventory_item(product_id):
+    """
+    Delete an inventory item
+    This endpoint deletes an inventory item based on product id
+    """
+    app.logger.info("Request to delete an inventory item with id [%s]", product_id)
 
-    data = request.get_json()
-    app.logger.info("Processing: %s", data)
+    # delete item if exists
+    inventory = Inventory.find(product_id)
+    if inventory:
+        app.logger.info("Item with ID: %d found.", product_id)
+        inventory.delete()
 
-    inventory = Inventory()
-    try:
-        inventory.deserialize(data)
-    except DataValidationError as error:
-        abort(status.HTTP_400_BAD_REQUEST, str(error))
-
-    inventory.create()
-    app.logger.info("Inventory item with new id [%s] saved!", inventory.id)
-
-    location_url = url_for("get_inventory", inventory_id=inventory.id, _external=True)
-    return (
-        jsonify(inventory.serialize()),
-        status.HTTP_201_CREATED,
-        {"Location": location_url},
-    )
-
-
-@app.route("/inventory/<int:inventory_id>", methods=["GET"])
-def get_inventory(inventory_id):
-    """Retrieve a single Inventory item"""
-    inventory = Inventory.find(inventory_id)
-    if not inventory:
-        abort(
-            status.HTTP_404_NOT_FOUND,
-            f"Inventory with id '{inventory_id}' was not found.",
-        )
-    return jsonify(inventory.serialize()), status.HTTP_200_OK
-
-
-@app.route("/inventory/<int:inventory_id>", methods=["PATCH"])
-def patch_inventory(inventory_id):
-    """Partially update an Inventory item"""
-    app.logger.info("Request to patch Inventory item with id: %s", inventory_id)
-    check_content_type("application/json")
-
-    inventory = Inventory.find(inventory_id)
-    if not inventory:
-        abort(
-            status.HTTP_404_NOT_FOUND,
-            f"Inventory with id '{inventory_id}' was not found.",
-        )
-
-    data = request.get_json()
-    app.logger.info("Patching with: %s", data)
-
-    if "name" in data:
-        inventory.name = data["name"]
-    if "product_id" in data:
-        inventory.product_id = data["product_id"]
-    if "quantity_on_hand" in data:
-        inventory.quantity_on_hand = int(data["quantity_on_hand"])
-    if "restock_level" in data:
-        inventory.restock_level = int(data["restock_level"])
-    if "condition" in data:
-        try:
-            inventory.condition = ItemCondition(data["condition"])
-        except ValueError:
-            abort(
-                status.HTTP_400_BAD_REQUEST,
-                f"Invalid condition value: '{data['condition']}'",
-            )
-
-    inventory.update()
-    return jsonify(inventory.serialize()), status.HTTP_200_OK
+    app.logger.info("Inventory with ID: %d delete complete.", product_id)
+    return {}, status.HTTP_204_NO_CONTENT

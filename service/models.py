@@ -85,7 +85,7 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def delete(self):
-        """Removes a YourResourceModel from the data store"""
+        """Removes an inventory item from the data store"""
         logger.info("Deleting %s", self.name)
         try:
             db.session.delete(self)
