@@ -24,7 +24,8 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, YourResourceModel
+from service.models import db, Inventory
+from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -56,7 +57,7 @@ class TestYourResourceService(TestCase):
     def setUp(self):
         """Runs before each test"""
         self.client = app.test_client()
-        db.session.query(YourResourceModel).delete()  # clean up the last tests
+        db.session.query(Inventory).delete()  # clean up the last tests
         db.session.commit()
 
     def tearDown(self):
@@ -67,9 +68,64 @@ class TestYourResourceService(TestCase):
     #  P L A C E   T E S T   C A S E S   H E R E
     ######################################################################
 
+    ######################################################################
+    #  TEST FOR CREATE INVENTORY
+    ######################################################################
     def test_index(self):
         """It should call the home page"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    def test_create_inventory(self):
+        """It should create a new Inventory record"""
+        test_inventory = InventoryFactory()
+        payload = {
+            "name": test_inventory.name,
+            "product_id": test_inventory.product_id,
+            "quantity_on_hand": test_inventory.quantity_on_hand,
+            "restock_level": test_inventory.restock_level,
+            "condition": test_inventory.condition.value,
+        }
+        resp = self.client.post(
+            "/inventory",
+            json=payload,
+            content_type="application/json",
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIsNotNone(resp.headers.get("Location"))
+
+        new_inventory = resp.get_json()
+        self.assertEqual(new_inventory["name"], payload["name"])
+        self.assertEqual(new_inventory["product_id"], payload["product_id"])
+        self.assertEqual(new_inventory["quantity_on_hand"], payload["quantity_on_hand"])
+        self.assertEqual(new_inventory["restock_level"], payload["restock_level"])
+        self.assertEqual(new_inventory["condition"], payload["condition"])
+        self.assertIn("id", new_inventory)
+
+    def test_create_inventory_no_data(self):
+        """It should not create an Inventory record with missing body"""
+        resp = self.client.post(
+            "/inventory",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_inventory_no_content_type(self):
+        """It should not create an Inventory record with wrong content type"""
+        resp = self.client.post(
+            "/inventory",
+            data="some data",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_create_inventory_bad_data(self):
+        """It should not create an Inventory record with invalid data"""
+        resp = self.client.post(
+            "/inventory",
+            json={"bad_field": "bad_value"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)

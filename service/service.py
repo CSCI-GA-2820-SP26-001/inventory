@@ -1,25 +1,6 @@
 from flask import Flask, request, jsonify, abort
 from models import Inventory, ItemCondition, DataValidationError, db
 
-app = Flask(__name__)
-
-
-@app.route("/inventory", methods=["POST"])
-def create_inventory():
-    """Creates a new Inventory record"""
-    data = request.get_json()
-    if not data:
-        abort(400, description="Request body must be JSON")
-
-    inventory = Inventory()
-    try:
-        inventory.deserialize(data)
-    except DataValidationError as e:
-        abort(400, description=str(e))
-
-    inventory.create()
-    return jsonify(inventory.serialize()), 201
-
 
 def serialize(self):
     """Serializes an Inventory into a dictionary"""
