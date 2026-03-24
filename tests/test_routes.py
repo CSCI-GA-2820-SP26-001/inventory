@@ -129,3 +129,27 @@ class TestYourResourceService(TestCase):
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    ######################################################################
+    #  TEST FOR GET INVENTORY
+    ######################################################################
+    def test_get_inventory(self):
+        """It should get an existing Inventory record"""
+        inventory = InventoryFactory()
+        inventory.create()
+
+        resp = self.client.get(f"/inventory/{inventory.id}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(data["id"], inventory.id)
+        self.assertEqual(data["name"], inventory.name)
+        self.assertEqual(data["product_id"], inventory.product_id)
+        self.assertEqual(data["quantity_on_hand"], inventory.quantity_on_hand)
+        self.assertEqual(data["restock_level"], inventory.restock_level)
+        self.assertEqual(data["condition"], inventory.condition.value)
+
+    def test_get_inventory_not_found(self):
+        """It should return 404 for an Inventory record that does not exist"""
+        resp = self.client.get("/inventory/0")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
