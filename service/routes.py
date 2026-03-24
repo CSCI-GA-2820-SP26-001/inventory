@@ -68,5 +68,29 @@ def delete_inventory_item(product_id):
         app.logger.info("Item with ID: %d found.", product_id)
         inventory.delete()
 
-    app.logger.info("Inventory with ID: %d delete complete.", product_id)
-    return {}, status.HTTP_204_NO_CONTENT
+@app.route("/inventory/<int:inventory_id>", methods=["GET"])
+def get_inventory(inventory_id):
+    """Retrieve a single Inventory item"""
+    inventory = Inventory.find(inventory_id)
+    if not inventory:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Inventory with id '{inventory_id}' was not found.",
+        )
+    return jsonify(inventory.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# LIST ALL INVENTORY ITEMS
+######################################################################
+@app.route("/inventory", methods=["GET"])
+def list_inventory():
+    """Returns all Inventory items"""
+    app.logger.info("Request for inventory list")
+
+    inventory = Inventory.all()
+
+    results = [item.serialize() for item in inventory]
+
+    app.logger.info("Returning %d inventory items", len(results))
+    return jsonify(results), status.HTTP_200_OK

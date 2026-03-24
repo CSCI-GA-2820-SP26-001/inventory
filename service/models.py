@@ -1,5 +1,5 @@
 """
-Models for YourResourceModel
+Models for Inventory
 
 All of the models are stored in this module
 """
@@ -56,11 +56,11 @@ class Inventory(db.Model):
     )
 
     def __repr__(self):
-        return f"<YourResourceModel {self.name} id=[{self.id}]>"
+        return f"<Inventory {self.name} id=[{self.id}]>"
 
     def create(self):
         """
-        Creates a YourResourceModel to the database
+        Creates a Inventory to the database
         """
         logger.info("Creating %s", self.name)
         self.id = None  # pylint: disable=invalid-name
@@ -74,7 +74,7 @@ class Inventory(db.Model):
 
     def update(self):
         """
-        Updates a YourResourceModel to the database
+        Updates a Inventory to the database
         """
         logger.info("Saving %s", self.name)
         try:
@@ -85,7 +85,7 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def delete(self):
-        """Removes an inventory item from the data store"""
+        """Removes a Inventory from the data store"""
         logger.info("Deleting %s", self.name)
         try:
             db.session.delete(self)
@@ -96,10 +96,7 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def serialize(self):
-        """Serializes a YourResourceModel into a dictionary"""
-        condition_val = (
-            self.condition.value if self.condition is not None else None
-        )
+        """Serializes a Inventory into a dictionary"""
         return {
             "id": self.id,
             "name": self.name,
@@ -115,7 +112,7 @@ class Inventory(db.Model):
 
     def deserialize(self, data):
         """
-        Deserializes a YourResourceModel from a dictionary
+        Deserializes a Inventory item from a dictionary
 
         Args:
             data (dict): A dictionary containing the resource data
@@ -128,13 +125,13 @@ class Inventory(db.Model):
             self.condition = ItemCondition(data["condition"])
         except KeyError as error:
             raise DataValidationError(
-                "Invalid YourResourceModel: missing " + error.args[0]
+                "Invalid Inventory: missing " + error.args[0]
             ) from error
         except ValueError as error:
             raise DataValidationError("Invalid value: " + str(error)) from error
         except TypeError as error:
             raise DataValidationError(
-                "Invalid YourResourceModel: body of request contained bad or no data "
+                "Invalid Inventory: body of request contained bad or no data "
                 + str(error)
             ) from error
         return self
@@ -145,19 +142,19 @@ class Inventory(db.Model):
 
     @classmethod
     def all(cls):
-        """Returns all of the YourResourceModels in the database"""
+        """Returns all of the Inventory in the database"""
         logger.info("Processing all YourResourceModels")
         return cls.query.all()
 
     @classmethod
     def find(cls, by_id):
-        """Finds a YourResourceModel by it's ID"""
+        """Finds a Inventory by it's ID"""
         logger.info("Processing lookup for id %s ...", by_id)
         return cls.query.session.get(cls, by_id)
 
     @classmethod
     def find_by_name(cls, name):
-        """Returns all YourResourceModels with the given name
+        """Returns all Inventory with the given name
 
         Args:
             name (string): the name of the YourResourceModels you want to match

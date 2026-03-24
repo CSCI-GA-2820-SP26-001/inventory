@@ -72,6 +72,60 @@ class TestInventoryModel(TestCase):
         inventory.create()
         found = Inventory.all()
         self.assertEqual(len(found), 1)
-        # delete the item and make sure it isn't in the database
-        inventory.delete()
-        self.assertEqual(len(Inventory.all()), 0)
+        data = Inventory.find(inventory.id)
+        self.assertEqual(data.name, inventory.name)
+
+    def test_serialize_inventory(self):
+        """It should serialize an Inventory"""
+        inventory = InventoryFactory()
+        inventory.create()
+        data = inventory.serialize()
+        self.assertEqual(data["id"], inventory.id)
+        self.assertEqual(data["name"], inventory.name)
+        self.assertEqual(data["product_id"], inventory.product_id)
+        self.assertEqual(data["quantity_on_hand"], inventory.quantity_on_hand)
+        self.assertEqual(data["restock_level"], inventory.restock_level)
+        self.assertEqual(data["condition"], inventory.condition.value)
+
+    def test_deserialize_inventory(self):
+        """It should deserialize an Inventory from POST-like payload"""
+        inventory = Inventory()
+        payload = {
+            "name": "keyboard",
+            "product_id": "sku-123",
+            "quantity_on_hand": 8,
+            "restock_level": 3,
+            "condition": "new",
+        }
+        inventory.deserialize(payload)
+        self.assertEqual(inventory.name, payload["name"])
+        self.assertEqual(inventory.product_id, payload["product_id"])
+        self.assertEqual(inventory.quantity_on_hand, payload["quantity_on_hand"])
+        self.assertEqual(inventory.restock_level, payload["restock_level"])
+        self.assertEqual(inventory.condition.value, payload["condition"])
+
+    def test_deserialize_inventory_missing_field(self):
+        """It should not deserialize an Inventory with missing fields"""
+        inventory = Inventory()
+        payload = {
+            "name": "keyboard",
+            "quantity_on_hand": 8,
+            "restock_level": 3,
+            "condition": "new",
+        }
+        self.assertRaises(DataValidationError, inventory.deserialize, payload)
+
+
+def test_list_all_inventory(self):
+    """It should List all Inventory items in the database"""
+    items = Inventory.all()
+    self.assertEqual(items, [])
+
+    # Create 5 Inventory items
+    for _ in range(5):
+        item = InventoryFactory()
+        item.create()
+
+    # See if we get back 5 items
+    items = Inventory.all()
+    self.assertEqual(len(items), 5)

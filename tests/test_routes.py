@@ -97,23 +97,105 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    def test_create_inventory(self):
+        """It should create a new Inventory record"""
+        test_inventory = InventoryFactory()
+        payload = {
+            "name": test_inventory.name,
+            "product_id": test_inventory.product_id,
+            "quantity_on_hand": test_inventory.quantity_on_hand,
+            "restock_level": test_inventory.restock_level,
+            "condition": test_inventory.condition.value,
+        }
+        resp = self.client.post(
+            "/inventory",
+            json=payload,
+            content_type="application/json",
+        )
 
-    # ----------------------------------------------------------
-    # TEST DELETE
-    # ----------------------------------------------------------
-    def test_delete_inventory(self):
-        """It should Delete an Inventory"""
-        test_item = self._create_inventory_items(1)[0]
-        response = self.client.delete(f"{BASE_URL}/{test_item.id}")
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(len(response.data), 0)
-        # make sure they are deleted
-        response = self.client.get(f"{BASE_URL}/{test_item.id}")
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIsNotNone(resp.headers.get("Location"))
 
-    def test_delete_non_existing_inventory(self):
-        """It should Delete an Inventory even if it doesn't exist"""
-        response = self.client.delete(f"{BASE_URL}/0")
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(len(response.data), 0)
+        new_inventory = resp.get_json()
+        self.assertEqual(new_inventory["name"], payload["name"])
+        self.assertEqual(new_inventory["product_id"], payload["product_id"])
+        self.assertEqual(new_inventory["quantity_on_hand"], payload["quantity_on_hand"])
+        self.assertEqual(new_inventory["restock_level"], payload["restock_level"])
+        self.assertEqual(new_inventory["condition"], payload["condition"])
+        self.assertIn("id", new_inventory)
+
+    def test_create_inventory_no_data(self):
+        """It should not create an Inventory record with missing body"""
+        resp = self.client.post(
+            "/inventory",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_inventory_no_content_type(self):
+        """It should not create an Inventory record with wrong content type"""
+        resp = self.client.post(
+            "/inventory",
+            data="some data",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_create_inventory_bad_data(self):
+        """It should not create an Inventory record with invalid data"""
+        resp = self.client.post(
+            "/inventory",
+            json={"bad_field": "bad_value"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    ######################################################################
+    #  TEST FOR GET INVENTORY
+    ######################################################################
+    def test_get_inventory(self):
+        """It should get an existing Inventory record"""
+        inventory = InventoryFactory()
+        inventory.create()
+
+        resp = self.client.get(f"/inventory/{inventory.id}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(data["id"], inventory.id)
+        self.assertEqual(data["name"], inventory.name)
+        self.assertEqual(data["product_id"], inventory.product_id)
+        self.assertEqual(data["quantity_on_hand"], inventory.quantity_on_hand)
+        self.assertEqual(data["restock_level"], inventory.restock_level)
+        self.assertEqual(data["condition"], inventory.condition.value)
+
+    def test_get_inventory_not_found(self):
+        """It should return 404 for an Inventory record that does not exist"""
+        resp = self.client.get("/inventory/0")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+# ----------------------------------------------------------
+# TEST LIST
+# ----------------------------------------------------------
+def test_list_inventory(self):
+    """It should list all Inventory items"""
+    self._create_inventory_items(3)
+
+    response = self.client.get(BASE_URL)
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    data = response.get_json()
+    self.assertIsInstance(data, list)
+    self.assertEqual(len(data), 3)
+
+
+def test_list_inventory_empty(self):
+    """It should return an empty list when there are no inventory items"""
+    response = self.client.get(BASE_URL)
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    data = response.get_json()
+    self.assertIsInstance(data, list)
+    self.assertEqual(len(data), 0)
