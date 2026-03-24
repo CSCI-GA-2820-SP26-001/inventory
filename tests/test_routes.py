@@ -24,7 +24,7 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, Inventory
+from service.models import db, Inventory, ItemCondition
 from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -153,3 +153,89 @@ class TestYourResourceService(TestCase):
         """It should return 404 for an Inventory record that does not exist"""
         resp = self.client.get("/inventory/0")
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    ######################################################################
+    #  TEST FOR PATCH INVENTORY
+    ######################################################################
+    def test_patch_inventory_quantity(self):
+        """It should update only quantity_on_hand and leave other fields unchanged"""
+        inventory = InventoryFactory()
+        inventory.create()
+
+        original_name = inventory.name
+        original_condition = inventory.condition.value
+
+        resp = self.client.patch(
+            f"/inventory/{inventory.id}",
+            json={"quantity_on_hand": 42},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(data["quantity_on_hand"], 42)
+        self.assertEqual(data["name"], original_name)
+        self.assertEqual(data["condition"], original_condition)
+
+    def test_patch_inventory_condition(self):
+        """It should update the condition field"""
+        inventory = InventoryFactory()
+        inventory.condition = ItemCondition.NEW
+        inventory.create()
+
+        resp = self.client.patch(
+            f"/inventory/{inventory.id}",
+            json={"condition": "used"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.get_json()["condition"], "used")
+
+    def test_patch_inventory_multiple_fields(self):
+        """It should update multiple fields at once"""
+        inventory = InventoryFactory()
+        inventory.create()
+
+        resp = self.client.patch(
+            f"/inventory/{inventory.id}",
+            json={"name": "updated-name", "restock_level": 99},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(data["name"], "updated-name")
+        self.assertEqual(data["restock_level"], 99)
+
+    def test_patch_inventory_not_found(self):
+        """It should return 404 when patching a non-existent inventory item"""
+        resp = self.client.patch(
+            "/inventory/0",
+            json={"quantity_on_hand": 10},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_patch_inventory_invalid_condition(self):
+        """It should return 400 for an invalid condition value"""
+        inventory = InventoryFactory()
+        inventory.create()
+
+        resp = self.client.patch(
+            f"/inventory/{inventory.id}",
+            json={"condition": "broken"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_inventory_no_content_type(self):
+        """It should return 415 when content type is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+
+        resp = self.client.patch(
+            f"/inventory/{inventory.id}",
+            data="quantity_on_hand=5",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)

@@ -23,7 +23,7 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, DataValidationError
+from service.models import Inventory, ItemCondition, DataValidationError
 from service.common import status  # HTTP Status Codes
 
 
@@ -89,4 +89,41 @@ def get_inventory(inventory_id):
             status.HTTP_404_NOT_FOUND,
             f"Inventory with id '{inventory_id}' was not found.",
         )
+    return jsonify(inventory.serialize()), status.HTTP_200_OK
+
+
+@app.route("/inventory/<int:inventory_id>", methods=["PATCH"])
+def patch_inventory(inventory_id):
+    """Partially update an Inventory item"""
+    app.logger.info("Request to patch Inventory item with id: %s", inventory_id)
+    check_content_type("application/json")
+
+    inventory = Inventory.find(inventory_id)
+    if not inventory:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Inventory with id '{inventory_id}' was not found.",
+        )
+
+    data = request.get_json()
+    app.logger.info("Patching with: %s", data)
+
+    if "name" in data:
+        inventory.name = data["name"]
+    if "product_id" in data:
+        inventory.product_id = data["product_id"]
+    if "quantity_on_hand" in data:
+        inventory.quantity_on_hand = int(data["quantity_on_hand"])
+    if "restock_level" in data:
+        inventory.restock_level = int(data["restock_level"])
+    if "condition" in data:
+        try:
+            inventory.condition = ItemCondition(data["condition"])
+        except ValueError:
+            abort(
+                status.HTTP_400_BAD_REQUEST,
+                f"Invalid condition value: '{data['condition']}'",
+            )
+
+    inventory.update()
     return jsonify(inventory.serialize()), status.HTTP_200_OK
