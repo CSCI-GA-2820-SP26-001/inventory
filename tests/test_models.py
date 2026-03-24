@@ -14,9 +14,7 @@
 # limitations under the License.
 ######################################################################
 
-"""
-Test cases for Pet Model
-"""
+"""Test cases for Inventory Model"""
 
 # pylint: disable=duplicate-code
 import os
@@ -32,11 +30,11 @@ DATABASE_URI = os.getenv(
 
 
 ######################################################################
-#  YourResourceModel   M O D E L   T E S T   C A S E S
+#  Inventory   M O D E L   T E S T   C A S E S
 ######################################################################
 # pylint: disable=too-many-public-methods
-class TestYourResourceModel(TestCase):
-    """Test Cases for YourResourceModel Model"""
+class TestInventoryModel(TestCase):
+    """Test Cases for Inventory Model"""
 
     @classmethod
     def setUpClass(cls):

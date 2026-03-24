@@ -89,6 +89,9 @@ class TestYourResourceService(TestCase):
     #  P L A C E   T E S T   C A S E S   H E R E
     ######################################################################
 
+    ######################################################################
+    #  TEST FOR CREATE INVENTORY
+    ######################################################################
     def test_index(self):
         """It should call the home page"""
         resp = self.client.get("/")
