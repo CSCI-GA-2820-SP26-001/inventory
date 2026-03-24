@@ -175,6 +175,60 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/inventory/0")
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_inventory(self):
+        """It should update an existing Inventory record (PUT)"""
+        inventory = InventoryFactory()
+        inventory.create()
+        payload = {
+            "name": "updated-name",
+            "product_id": "SKU-UPDATED",
+            "quantity_on_hand": 99,
+            "restock_level": 5,
+            "condition": "used",
+        }
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            json=payload,
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(data["id"], inventory.id)
+        self.assertEqual(data["name"], payload["name"])
+        self.assertEqual(data["product_id"], payload["product_id"])
+        self.assertEqual(data["quantity_on_hand"], payload["quantity_on_hand"])
+        self.assertEqual(data["restock_level"], payload["restock_level"])
+        self.assertEqual(data["condition"], payload["condition"])
+
+    def test_update_inventory_not_found(self):
+        """It should return 404 when updating a missing inventory id"""
+        resp = self.client.put(
+            "/inventory/999999",
+            json={
+                "name": "x",
+                "product_id": "y",
+                "quantity_on_hand": 1,
+                "restock_level": 1,
+                "condition": "new",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_inventory(self):
+        """It should delete an inventory item and return 204"""
+        items = self._create_inventory_items(1)
+        iid = items[0].id
+        resp = self.client.delete(f"/inventory/{iid}")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        resp_get = self.client.get(f"/inventory/{iid}")
+        self.assertEqual(resp_get.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_inventory_not_found(self):
+        """It should return 404 when deleting a missing inventory id"""
+        resp = self.client.delete("/inventory/999999")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_list_inventory(self):
         """It should list all Inventory items"""
         self._create_inventory_items(3)

@@ -1,0 +1,57 @@
+# Inventory Service — REST Client (VS Code / Cursor: "REST Client" extension by Huachao Mao)
+# Start the server first, e.g.: PORT=8080 .venv/bin/python wsgi.py
+# Change @host if you use another port.
+#
+# Use @id from GET /inventory or from the POST 201 body. After deleting all rows, the next
+# POST gets id 1 again (sequence is resynced on delete). While rows exist, match a real id.
+
+@host = http://127.0.0.1:8080
+@id = 6
+
+
+### Service info (root)
+GET {{host}}/
+
+###
+
+### List all inventory items
+GET {{host}}/inventory
+
+###
+
+### Create inventory item (201 + Location header)
+# @name condition must be: new | open_box | used
+POST {{host}}/inventory
+Content-Type: application/json
+
+{
+  "name": "widget-a",
+  "product_id": "SKU-1001",
+  "quantity_on_hand": 10,
+  "restock_level": 2,
+  "condition": "new"
+}
+
+###
+
+### Get one inventory item by id (set @id above from POST response or list)
+GET {{host}}/inventory/{{id}}
+
+###
+
+### Update inventory item (full replace — all fields required, same as POST)
+PUT {{host}}/inventory/{{id}}
+Content-Type: application/json
+
+{
+  "name": "widget-a-updated",
+  "product_id": "SKU-1001",
+  "quantity_on_hand": 42,
+  "restock_level": 5,
+  "condition": "open_box"
+}
+
+###
+
+### Delete inventory item by id (same @id)
+DELETE {{host}}/inventory/{{id}}

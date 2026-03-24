@@ -5,13 +5,43 @@ All of the models are stored in this module
 """
 
 import logging
-from flask_sqlalchemy import SQLAlchemy
 from enum import Enum
+
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 
 logger = logging.getLogger("flask.app")
 
 # Create the SQLAlchemy object to be initialized later in init_db()
 db = SQLAlchemy()
+
+
+def _sync_inventory_id_sequence_postgres() -> None:
+    """Align SERIAL/identity sequence with MAX(id) after a delete (PostgreSQL only)."""
+    bind = db.session.get_bind()
+    if bind is None or bind.dialect.name != "postgresql":
+        return
+    try:
+        max_id = db.session.execute(
+            text("SELECT COALESCE(MAX(id), 0) FROM inventory")
+        ).scalar_one()
+        if max_id == 0:
+            db.session.execute(
+                text(
+                    "SELECT setval(pg_get_serial_sequence('inventory', 'id'), 1, false)"
+                )
+            )
+        else:
+            db.session.execute(
+                text(
+                    "SELECT setval(pg_get_serial_sequence('inventory', 'id'), :mid, true)"
+                ),
+                {"mid": max_id},
+            )
+        db.session.commit()
+    except Exception as exc:  # pylint: disable=broad-except
+        db.session.rollback()
+        logger.warning("Could not resync inventory id sequence: %s", exc)
 
 
 class DataValidationError(Exception):
@@ -90,6 +120,7 @@ class Inventory(db.Model):
         try:
             db.session.delete(self)
             db.session.commit()
+            _sync_inventory_id_sequence_postgres()
         except Exception as e:
             db.session.rollback()
             logger.error("Error deleting record: %s", self)
@@ -150,7 +181,7 @@ class Inventory(db.Model):
     def find(cls, by_id):
         """Finds a Inventory by it's ID"""
         logger.info("Processing lookup for id %s ...", by_id)
-        return cls.query.session.get(cls, by_id)
+        return db.session.get(cls, by_id)
 
     @classmethod
     def find_by_name(cls, name):

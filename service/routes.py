@@ -43,6 +43,12 @@ def index():
     )
 
 
+@app.route("/favicon.ico")
+def favicon():
+    """Browsers request this automatically; avoid noisy 404s in logs."""
+    return "", status.HTTP_204_NO_CONTENT
+
+
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
@@ -62,15 +68,40 @@ def delete_inventory_item(product_id):
     """
     app.logger.info("Request to delete an inventory item with id [%s]", product_id)
 
-    # delete item if exists
     inventory = Inventory.find(product_id)
-    if inventory:
-        app.logger.info("Item with ID: %d found.", product_id)
-        inventory.delete()
+    if not inventory:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Inventory with id '{product_id}' was not found.",
+        )
+    app.logger.info("Item with ID: %d found.", product_id)
+    inventory.delete()
+    return "", status.HTTP_204_NO_CONTENT
 
-@app.route("/inventory/<int:inventory_id>", methods=["GET"])
+
+@app.route("/inventory/<int:inventory_id>", methods=["GET", "PUT"])
 def get_inventory(inventory_id):
-    """Retrieve a single Inventory item"""
+    """Retrieve (GET) or replace (PUT) a single Inventory item."""
+    if request.method == "PUT":
+        if not request.is_json:
+            abort(
+                status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                "Request Content-Type must be application/json",
+            )
+        data = request.get_json(silent=True)
+        if data is None:
+            raise DataValidationError("Request body must contain valid JSON")
+
+        inventory = Inventory.find(inventory_id)
+        if not inventory:
+            abort(
+                status.HTTP_404_NOT_FOUND,
+                f"Inventory with id '{inventory_id}' was not found.",
+            )
+        inventory.deserialize(data)
+        inventory.update()
+        return jsonify(inventory.serialize()), status.HTTP_200_OK
+
     inventory = Inventory.find(inventory_id)
     if not inventory:
         abort(

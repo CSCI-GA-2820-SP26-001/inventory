@@ -37,9 +37,19 @@ lint: ## Run the linter
 	-pylint service tests --max-line-length=127
 
 .PHONY: test
-test: ## Run the unit tests
+test: ## Run the unit tests (uses .venv or pipenv so pytest-cov / pytest-pspec are available)
 	$(info Running tests...)
-	export RETRY_COUNT=1; pytest --pspec --cov=service --cov-fail-under=95 --disable-warnings
+	@export RETRY_COUNT=1; \
+	if [ -x "$(CURDIR)/.venv/bin/python" ]; then \
+		"$(CURDIR)/.venv/bin/python" -m pytest; \
+	elif command -v pipenv >/dev/null 2>&1 && [ -f "$(CURDIR)/Pipfile" ]; then \
+		pipenv run pytest; \
+	else \
+		echo >&2 "Need pytest with pytest-cov and pytest-pspec (see Pipfile). For example:"; \
+		echo >&2 "  pipenv install --dev && pipenv run pytest"; \
+		echo >&2 "  python3 -m venv .venv && .venv/bin/pip install pytest pytest-cov pytest-pspec ; .venv/bin/python -m pytest"; \
+		exit 1; \
+	fi
 
 .PHONY: run
 run: ## Run the service
