@@ -103,7 +103,7 @@ class Inventory(db.Model):
             "product_id": self.product_id,
             "quantity_on_hand": self.quantity_on_hand,
             "restock_level": self.restock_level,
-            "condition": condition_val,
+            "condition": self.condition.value,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_updated": (
                 self.last_updated.isoformat() if self.last_updated else None

@@ -20,8 +20,9 @@
 import os
 import logging
 from unittest import TestCase
+from unittest.mock import patch
 from wsgi import app
-from service.models import Inventory, ItemCondition, DataValidationError, db
+from service.models import Inventory, DataValidationError, db
 from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -63,11 +64,8 @@ class TestInventoryModel(TestCase):
     #  T E S T   C A S E S
     ######################################################################
 
-    # Todo: Add your test cases here...
-
     def test_delete_an_inventory(self):
         """It should delete an Inventory item"""
-        # Todo: Remove this test case example
         inventory = InventoryFactory()
         inventory.create()
         found = Inventory.all()
@@ -115,17 +113,99 @@ class TestInventoryModel(TestCase):
         }
         self.assertRaises(DataValidationError, inventory.deserialize, payload)
 
+    def test_deserialize_inventory_invalid_condition(self):
+        """It should not deserialize when condition is not a valid enum value"""
+        inventory = Inventory()
+        payload = {
+            "name": "keyboard",
+            "product_id": "sku-1",
+            "quantity_on_hand": 1,
+            "restock_level": 1,
+            "condition": "not_a_real_condition",
+        }
+        self.assertRaises(DataValidationError, inventory.deserialize, payload)
 
-def test_list_all_inventory(self):
-    """It should List all Inventory items in the database"""
-    items = Inventory.all()
-    self.assertEqual(items, [])
+    def test_deserialize_inventory_bad_numeric_data(self):
+        """It should not deserialize when numeric fields are wrong type (TypeError)"""
+        inventory = Inventory()
+        payload = {
+            "name": "keyboard",
+            "product_id": "sku-1",
+            "quantity_on_hand": None,
+            "restock_level": 2,
+            "condition": "new",
+        }
+        self.assertRaises(DataValidationError, inventory.deserialize, payload)
 
-    # Create 5 Inventory items
-    for _ in range(5):
-        item = InventoryFactory()
-        item.create()
+    def test_repr(self):
+        """It should provide a readable __repr__ for debugging"""
+        inventory = InventoryFactory.build()
+        text = repr(inventory)
+        self.assertIn("Inventory", text)
+        self.assertIn(str(inventory.name), text)
 
-    # See if we get back 5 items
-    items = Inventory.all()
-    self.assertEqual(len(items), 5)
+    def test_create_raises_when_commit_fails(self):
+        """It should wrap DB failures on create as DataValidationError"""
+        inventory = InventoryFactory.build()
+        with patch.object(db.session, "commit", side_effect=RuntimeError("db down")):
+            with self.assertRaises(DataValidationError):
+                inventory.create()
+
+    def test_update_persists_changes(self):
+        """It should persist field changes with update()"""
+        inventory = InventoryFactory()
+        inventory.create()
+        new_name = "renamed-item"
+        inventory.name = new_name
+        inventory.update()
+        again = Inventory.find(inventory.id)
+        self.assertIsNotNone(again)
+        self.assertEqual(again.name, new_name)
+
+    def test_update_raises_when_commit_fails(self):
+        """It should wrap DB failures on update as DataValidationError"""
+        inventory = InventoryFactory()
+        inventory.create()
+        inventory.name = "x"
+        with patch.object(db.session, "commit", side_effect=RuntimeError("db down")):
+            with self.assertRaises(DataValidationError):
+                inventory.update()
+
+    def test_delete_removes_record(self):
+        """It should remove an inventory row with delete()"""
+        inventory = InventoryFactory()
+        inventory.create()
+        iid = inventory.id
+        inventory.delete()
+        self.assertIsNone(Inventory.find(iid))
+
+    def test_delete_raises_when_commit_fails(self):
+        """It should wrap DB failures on delete as DataValidationError"""
+        inventory = InventoryFactory()
+        inventory.create()
+        with patch.object(db.session, "commit", side_effect=RuntimeError("db down")):
+            with self.assertRaises(DataValidationError):
+                inventory.delete()
+
+    def test_find_by_name(self):
+        """It should return a query for inventories matching the given name"""
+        target = "find-me-unique"
+        InventoryFactory(name=target).create()
+        InventoryFactory().create()
+        result = Inventory.find_by_name(target)
+        self.assertEqual(result.count(), 1)
+        self.assertEqual(result.first().name, target)
+
+    def test_list_all_inventory(self):
+        """It should List all Inventory items in the database"""
+        items = Inventory.all()
+        self.assertEqual(items, [])
+
+        # Create 5 Inventory items
+        for _ in range(5):
+            item = InventoryFactory()
+            item.create()
+
+        # See if we get back 5 items
+        items = Inventory.all()
+        self.assertEqual(len(items), 5)

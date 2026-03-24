@@ -23,7 +23,7 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, ItemCondition
+from service.models import Inventory, DataValidationError
 from service.common import status  # HTTP Status Codes
 
 
@@ -94,3 +94,30 @@ def list_inventory():
 
     app.logger.info("Returning %d inventory items", len(results))
     return jsonify(results), status.HTTP_200_OK
+
+
+######################################################################
+# CREATE AN Inventory ITEM
+######################################################################
+@app.route("/inventory", methods=["POST"])
+def create_inventory():
+    """Create an Inventory item from JSON payload."""
+    if not request.is_json:
+        abort(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Request Content-Type must be application/json",
+        )
+    data = request.get_json(silent=True)
+    if data is None:
+        raise DataValidationError("Request body must contain valid JSON")
+
+    inventory = Inventory()
+    inventory.deserialize(data)
+    inventory.create()
+
+    location = url_for("get_inventory", inventory_id=inventory.id, _external=True)
+    return (
+        jsonify(inventory.serialize()),
+        status.HTTP_201_CREATED,
+        {"Location": location},
+    )
