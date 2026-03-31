@@ -57,9 +57,7 @@ class ItemCondition(Enum):
 
 
 class Inventory(db.Model):
-    """
-    Class that represents a YourResourceModel
-    """
+    """Represents an inventory item in the database."""
 
     ##################################################
     # Table Schema
@@ -90,7 +88,7 @@ class Inventory(db.Model):
 
     def create(self):
         """
-        Creates a Inventory to the database
+        Persists a new Inventory record to the database.
         """
         logger.info("Creating %s", self.name)
         self.id = None  # pylint: disable=invalid-name
@@ -104,7 +102,7 @@ class Inventory(db.Model):
 
     def update(self):
         """
-        Updates a Inventory to the database
+        Persists changes to this Inventory record.
         """
         logger.info("Saving %s", self.name)
         try:
@@ -115,7 +113,7 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def delete(self):
-        """Removes a Inventory from the data store"""
+        """Remove this Inventory record from the database."""
         logger.info("Deleting %s", self.name)
         try:
             db.session.delete(self)
@@ -127,7 +125,7 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def serialize(self):
-        """Serializes a Inventory into a dictionary"""
+        """Serialize this record to a dictionary."""
         return {
             "id": self.id,
             "name": self.name,
@@ -143,7 +141,7 @@ class Inventory(db.Model):
 
     def deserialize(self, data):
         """
-        Deserializes a Inventory item from a dictionary
+        Deserialize an Inventory item from a dictionary.
 
         Args:
             data (dict): A dictionary containing the resource data
@@ -174,12 +172,12 @@ class Inventory(db.Model):
     @classmethod
     def all(cls):
         """Returns all of the Inventory in the database"""
-        logger.info("Processing all YourResourceModels")
+        logger.info("Processing all Inventory records")
         return cls.query.all()
 
     @classmethod
     def find(cls, by_id):
-        """Finds a Inventory by it's ID"""
+        """Finds an Inventory record by its ID."""
         logger.info("Processing lookup for id %s ...", by_id)
         return db.session.get(cls, by_id)
 
@@ -188,7 +186,7 @@ class Inventory(db.Model):
         """Returns all Inventory with the given name
 
         Args:
-            name (string): the name of the YourResourceModels you want to match
+            name (string): the inventory name to match
         """
         logger.info("Processing name query for %s ...", name)
         return cls.query.filter(cls.name == name)
