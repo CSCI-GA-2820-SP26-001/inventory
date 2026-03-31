@@ -15,7 +15,7 @@
 ######################################################################
 
 """
-TestYourResourceModel API Service Test Suite
+REST API tests for the Inventory service.
 """
 
 # pylint: disable=duplicate-code
@@ -38,8 +38,8 @@ BASE_URL = "/inventory"
 #  T E S T   C A S E S
 ######################################################################
 # pylint: disable=too-many-public-methods
-class TestYourResourceService(TestCase):
-    """REST API Server Tests"""
+class TestInventoryService(TestCase):
+    """REST API server tests for Inventory."""
 
     @classmethod
     def setUpClass(cls):
