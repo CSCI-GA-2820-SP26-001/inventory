@@ -102,7 +102,7 @@ tests/
 
 ## API Summary
 
-The service exposes a REST API to create, read, update, and delete **Inventory** records. Each record includes:
+The service exposes a REST API to create, read, update, and delete **Inventory** records, plus **restock** (`PUT /inventory/<id>/restock` with JSON `{"amount": <positive integer>}`) to increase `quantity_on_hand`. Each record includes:
 
 - **name** — Item name
 - **product_id** — Product identifier

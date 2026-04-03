@@ -128,6 +128,49 @@ def list_inventory():
 
 
 ######################################################################
+# RESTOCK AN Inventory ITEM
+######################################################################
+@app.route("/inventory/<int:inventory_id>/restock", methods=["PUT"])
+def restock_inventory(inventory_id):
+    """Increment quantity_on_hand by a positive integer amount."""
+    if not request.is_json:
+        abort(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Request Content-Type must be application/json",
+        )
+    data = request.get_json(silent=True)
+    if data is None:
+        raise DataValidationError("Request body must contain valid JSON")
+    if "amount" not in data:
+        raise DataValidationError("Request body must include 'amount'")
+    raw_amount = data["amount"]
+    if isinstance(raw_amount, bool):
+        raise DataValidationError("Invalid amount: must be a positive integer")
+    try:
+        amount = int(raw_amount)
+    except (TypeError, ValueError) as exc:
+        raise DataValidationError(
+            "Invalid amount: must be a positive integer"
+        ) from exc
+    if amount < 1:
+        raise DataValidationError("Invalid amount: must be a positive integer")
+
+    inventory = Inventory.find(inventory_id)
+    if not inventory:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Inventory with id '{inventory_id}' was not found.",
+        )
+
+    app.logger.info(
+        "Restock inventory id [%s] by amount [%s]", inventory_id, amount
+    )
+    inventory.quantity_on_hand += amount
+    inventory.update()
+    return jsonify(inventory.serialize()), status.HTTP_200_OK
+
+
+######################################################################
 # CREATE AN Inventory ITEM
 ######################################################################
 @app.route("/inventory", methods=["POST"])

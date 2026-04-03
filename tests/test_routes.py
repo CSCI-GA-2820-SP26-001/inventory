@@ -215,6 +215,134 @@ class TestYourResourceService(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_inventory_no_content_type(self):
+        """It should return 415 when PUT body is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="{}",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_update_inventory_no_data(self):
+        """It should return 400 when PUT body is empty or invalid JSON"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_restock_inventory(self):
+        """It should increment quantity_on_hand and return updated item (200)"""
+        inventory = InventoryFactory(quantity_on_hand=10)
+        inventory.create()
+        add = 7
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            json={"amount": add},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(data["id"], inventory.id)
+        self.assertEqual(data["quantity_on_hand"], 10 + add)
+        self.assertEqual(data["name"], inventory.name)
+        self.assertEqual(data["product_id"], inventory.product_id)
+        resp_get = self.client.get(f"/inventory/{inventory.id}")
+        self.assertEqual(resp_get.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp_get.get_json()["quantity_on_hand"], 10 + add)
+
+    def test_restock_inventory_not_found(self):
+        """It should return 404 when restocking a missing inventory id"""
+        resp = self.client.put(
+            "/inventory/999999/restock",
+            json={"amount": 5},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_restock_inventory_invalid_amount_missing(self):
+        """It should return 400 when amount is missing"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            json={},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_restock_inventory_invalid_amount_zero(self):
+        """It should return 400 when amount is zero"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            json={"amount": 0},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_restock_inventory_invalid_amount_negative(self):
+        """It should return 400 when amount is negative"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            json={"amount": -3},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_restock_inventory_invalid_amount_type(self):
+        """It should return 400 when amount is not a valid integer"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            json={"amount": "five"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_restock_inventory_invalid_amount_boolean(self):
+        """It should return 400 when amount is a JSON boolean (not an integer)"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            json={"amount": True},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_restock_inventory_no_content_type(self):
+        """It should return 415 when restock body is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            data="{}",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_restock_inventory_no_data(self):
+        """It should return 400 when restock body is empty or invalid JSON"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}/restock",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_delete_inventory(self):
         """It should delete an inventory item and return 204"""
         items = self._create_inventory_items(1)
