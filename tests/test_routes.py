@@ -97,6 +97,11 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
+    def test_favicon(self):
+        """It should return 204 for /favicon.ico"""
+        resp = self.client.get("/favicon.ico")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
     def test_create_inventory(self):
         """It should create a new Inventory record"""
         test_inventory = InventoryFactory()
@@ -215,6 +220,28 @@ class TestYourResourceService(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_inventory_no_content_type(self):
+        """It should return 415 when PUT body is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="{}",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_update_inventory_no_data(self):
+        """It should return 400 when PUT body is empty or invalid JSON"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_delete_inventory(self):
         """It should delete an inventory item and return 204"""
         items = self._create_inventory_items(1)
@@ -248,3 +275,44 @@ class TestYourResourceService(TestCase):
         data = response.get_json()
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
+
+    def test_list_inventory_filter_by_product_id(self):
+        """GET inventory list with product_id returns matching rows (200, JSON)"""
+        sku = "SKU-TRACK-XYZ"
+        a = InventoryFactory(product_id=sku)
+        a.create()
+        b = InventoryFactory(product_id=sku)
+        b.create()
+        InventoryFactory(product_id="OTHER-SKU").create()
+
+        response = self.client.get(f"{BASE_URL}?product_id={sku}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 2)
+        for row in data:
+            self.assertEqual(row["product_id"], sku)
+
+    def test_list_inventory_filter_product_id_no_matches(self):
+        """List filter by product_id returns empty list when nothing matches"""
+        InventoryFactory(product_id="ONLY-THIS").create()
+
+        response = self.client.get(f"{BASE_URL}?product_id=NONEXISTENT")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 0)
+
+    def test_list_inventory_filter_product_id_strips_whitespace(self):
+        """List filter trims whitespace on the product_id query parameter"""
+        sku = "SKU-TRIM"
+        InventoryFactory(product_id=sku).create()
+
+        response = self.client.get(f"{BASE_URL}?product_id=%20{sku}%20")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["product_id"], sku)

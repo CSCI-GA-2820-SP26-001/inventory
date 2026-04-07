@@ -116,10 +116,14 @@ def get_inventory(inventory_id):
 ######################################################################
 @app.route("/inventory", methods=["GET"])
 def list_inventory():
-    """Returns all Inventory items"""
+    """Returns all Inventory items, optionally filtered by ?product_id=<id>."""
     app.logger.info("Request for inventory list")
 
-    inventory = Inventory.all()
+    raw_product_id = request.args.get("product_id")
+    if raw_product_id is None:
+        inventory = Inventory.all()
+    else:
+        inventory = Inventory.find_by_product_id(raw_product_id.strip())
 
     results = [item.serialize() for item in inventory]
 

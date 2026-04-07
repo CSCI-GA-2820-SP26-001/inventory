@@ -19,6 +19,11 @@ GET {{host}}/inventory
 
 ###
 
+### List inventory by product_id (exact match; leading/trailing spaces in param are trimmed)
+GET {{host}}/inventory?product_id=SKU-1001
+
+###
+
 ### Create inventory item (201 + Location header)
 # @name condition must be: new | open_box | used
 POST {{host}}/inventory
