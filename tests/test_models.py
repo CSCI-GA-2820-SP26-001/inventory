@@ -22,7 +22,7 @@ import logging
 from unittest import TestCase
 from unittest.mock import patch
 from wsgi import app
-from service.models import Inventory, DataValidationError, db
+from service.models import Inventory, DataValidationError, ItemCondition, db
 from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -195,6 +195,15 @@ class TestInventoryModel(TestCase):
         result = Inventory.find_by_name(target)
         self.assertEqual(result.count(), 1)
         self.assertEqual(result.first().name, target)
+
+    def test_find_by_condition(self):
+        """It should return all inventories matching the given condition"""
+        InventoryFactory(condition=ItemCondition.NEW).create()
+        InventoryFactory(condition=ItemCondition.USED).create()
+        InventoryFactory(condition=ItemCondition.USED).create()
+        found = Inventory.find_by_condition(ItemCondition.USED)
+        self.assertEqual(len(found), 2)
+        self.assertTrue(all(i.condition == ItemCondition.USED for i in found))
 
     def test_list_all_inventory(self):
         """It should List all Inventory items in the database"""

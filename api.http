@@ -19,6 +19,11 @@ GET {{host}}/inventory
 
 ###
 
+### List inventory filtered by condition (new | open_box | used; case-insensitive, e.g. NEW)
+GET {{host}}/inventory?condition=NEW
+
+###
+
 ### Create inventory item (201 + Location header)
 # @name condition must be: new | open_box | used
 POST {{host}}/inventory

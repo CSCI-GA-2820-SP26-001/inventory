@@ -24,7 +24,7 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, Inventory
+from service.models import db, Inventory, ItemCondition
 from tests.factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -96,6 +96,11 @@ class TestYourResourceService(TestCase):
         """It should call the home page"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_favicon(self):
+        """It should return 204 for /favicon.ico"""
+        resp = self.client.get("/favicon.ico")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_create_inventory(self):
         """It should create a new Inventory record"""
@@ -215,6 +220,28 @@ class TestYourResourceService(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_inventory_no_content_type(self):
+        """It should return 415 when PUT body is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="{}",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_update_inventory_no_data(self):
+        """It should return 400 when PUT body is empty or invalid JSON"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_delete_inventory(self):
         """It should delete an inventory item and return 204"""
         items = self._create_inventory_items(1)
@@ -248,3 +275,57 @@ class TestYourResourceService(TestCase):
         data = response.get_json()
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
+
+    def test_list_inventory_filter_by_condition_new_uppercase(self):
+        """GET /inventory?condition=NEW returns only items in new condition (200, JSON)"""
+        n1 = InventoryFactory(condition=ItemCondition.NEW)
+        n1.create()
+        n2 = InventoryFactory(condition=ItemCondition.NEW)
+        n2.create()
+        u = InventoryFactory(condition=ItemCondition.USED)
+        u.create()
+
+        response = self.client.get(f"{BASE_URL}?condition=NEW")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 2)
+        for row in data:
+            self.assertEqual(row["condition"], ItemCondition.NEW.value)
+
+    def test_list_inventory_filter_by_condition_open_box_mixed_case(self):
+        """Condition filter accepts lowercase storage values (e.g. open_box, OPEN_BOX)"""
+        ob = InventoryFactory(condition=ItemCondition.OPEN_BOX)
+        ob.create()
+        InventoryFactory(condition=ItemCondition.NEW).create()
+
+        response = self.client.get(f"{BASE_URL}?condition=OPEN_BOX")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["condition"], ItemCondition.OPEN_BOX.value)
+
+    def test_list_inventory_filter_condition_no_matches(self):
+        """Condition filter returns empty list when nothing matches (200)"""
+        InventoryFactory(condition=ItemCondition.NEW).create()
+
+        response = self.client.get(
+            f"{BASE_URL}?condition={ItemCondition.USED.value}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 0)
+
+    def test_list_inventory_filter_invalid_condition(self):
+        """Invalid condition query returns 400 with JSON error body"""
+        InventoryFactory().create()
+
+        response = self.client.get(f"{BASE_URL}?condition=not-a-condition")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.is_json)
+        body = response.get_json()
+        self.assertEqual(body.get("status"), status.HTTP_400_BAD_REQUEST)
+        self.assertIn("message", body)

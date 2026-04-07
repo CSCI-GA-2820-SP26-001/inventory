@@ -23,7 +23,7 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, DataValidationError
+from service.models import Inventory, DataValidationError, ItemCondition
 from service.common import status  # HTTP Status Codes
 
 
@@ -116,10 +116,22 @@ def get_inventory(inventory_id):
 ######################################################################
 @app.route("/inventory", methods=["GET"])
 def list_inventory():
-    """Returns all Inventory items"""
+    """Returns all Inventory items, optionally filtered by ?condition=<value>."""
     app.logger.info("Request for inventory list")
 
-    inventory = Inventory.all()
+    raw_condition = request.args.get("condition")
+    if raw_condition is None:
+        inventory = Inventory.all()
+    else:
+        key = raw_condition.strip().lower()
+        try:
+            condition_filter = ItemCondition(key)
+        except ValueError as exc:
+            raise DataValidationError(
+                "Invalid condition: must be one of "
+                + ", ".join(sorted(c.value for c in ItemCondition))
+            ) from exc
+        inventory = Inventory.find_by_condition(condition_filter)
 
     results = [item.serialize() for item in inventory]
 
