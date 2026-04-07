@@ -69,13 +69,14 @@ def delete_inventory_item(product_id):
     app.logger.info("Request to delete an inventory item with id [%s]", product_id)
 
     inventory = Inventory.find(product_id)
-    if not inventory:
-        abort(
-            status.HTTP_404_NOT_FOUND,
-            f"Inventory with id '{product_id}' was not found.",
+    if inventory:
+        app.logger.info("Item with ID: %d found.", product_id)
+        inventory.delete()
+    else:
+        app.logger.info(
+            "Item with ID: %d not found; returning 204 for idempotent DELETE.",
+            product_id,
         )
-    app.logger.info("Item with ID: %d found.", product_id)
-    inventory.delete()
     return "", status.HTTP_204_NO_CONTENT
 
 

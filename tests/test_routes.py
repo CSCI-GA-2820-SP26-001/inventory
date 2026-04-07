@@ -225,9 +225,9 @@ class TestYourResourceService(TestCase):
         self.assertEqual(resp_get.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_delete_inventory_not_found(self):
-        """It should return 404 when deleting a missing inventory id"""
+        """It should return 204 when deleting a missing inventory id"""
         resp = self.client.delete("/inventory/999999")
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_list_inventory(self):
         """It should list all Inventory items"""
