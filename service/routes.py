@@ -23,7 +23,7 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, DataValidationError
+from service.models import Inventory, DataValidationError, ItemCondition
 from service.common import status  # HTTP Status Codes
 
 
@@ -112,17 +112,45 @@ def get_inventory(inventory_id):
 
 
 ######################################################################
-# LIST ALL INVENTORY ITEMS
+# LIST INVENTORY ITEMS
 ######################################################################
 @app.route("/inventory", methods=["GET"])
 def list_inventory():
     """Returns all Inventory items"""
     app.logger.info("Request for inventory list")
 
-    inventory = Inventory.all()
+    items = []
 
-    results = [item.serialize() for item in inventory]
+    # Parse any arguments from the query string
+    condition = request.args.get("condition")
+    product_id = request.args.get("product_id")
+    low_stock = request.args.get("low_stock")
 
+    if condition:
+        app.logger.info("Find by condition: %s", condition)
+        try:
+            condition_enum = ItemCondition(condition.lower())
+        except ValueError:
+            abort(status.HTTP_400_BAD_REQUEST, f"Invalid condition: {condition}")
+        items = Inventory.find_by_condition(condition_enum)
+
+    elif product_id:
+        app.logger.info("Find by product_id: %s", product_id)
+        items = Inventory.find_by_product_id(product_id)
+
+    elif low_stock:
+        app.logger.info("Find by low_stock: %s", low_stock)
+        low_stock_value = low_stock.lower() in ["true", "yes", "1"]
+        if low_stock_value:
+            items = Inventory.find_low_stock()
+        else:
+            items = Inventory.all()
+
+    else:
+        app.logger.info("Find all")
+        items = Inventory.all()
+
+    results = [item.serialize() for item in items]
     app.logger.info("Returning %d inventory items", len(results))
     return jsonify(results), status.HTTP_200_OK
 

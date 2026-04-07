@@ -24,7 +24,7 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, Inventory
+from service.models import ItemCondition, db, Inventory
 from tests.factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -248,3 +248,45 @@ class TestYourResourceService(TestCase):
         data = response.get_json()
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
+
+    ######################################################################
+    # TEST QUERY INVENTORY BY CONDITION
+    ######################################################################
+    def test_query_inventory_by_condition(self):
+        """It should Query Inventory items by condition"""
+        item1 = InventoryFactory(condition=ItemCondition.NEW)
+        response = self.client.post(BASE_URL, json=item1.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        item2 = InventoryFactory(condition=ItemCondition.NEW)
+        response = self.client.post(BASE_URL, json=item2.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        item3 = InventoryFactory(condition=ItemCondition.USED)
+        response = self.client.post(BASE_URL, json=item3.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.get(f"{BASE_URL}?condition=new")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.get_json()
+        self.assertEqual(len(data), 2)
+        for item in data:
+            self.assertEqual(item["condition"], "new")
+
+    def test_query_inventory_by_condition_no_matches(self):
+        """It should return an empty list when no Inventory items match the condition"""
+        item = InventoryFactory(condition=ItemCondition.USED)
+        response = self.client.post(BASE_URL, json=item.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.get(f"{BASE_URL}?condition=new")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.get_json()
+        self.assertEqual(data, [])
+
+    def test_query_inventory_by_bad_condition(self):
+        """It should return 400 for an invalid condition query"""
+        response = self.client.get(f"{BASE_URL}?condition=invalid")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
