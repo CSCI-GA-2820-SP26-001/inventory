@@ -27,6 +27,13 @@ from service.models import Inventory, DataValidationError
 from service.common import status  # HTTP Status Codes
 
 
+def _parse_low_stock_flag(raw: str | None) -> bool:
+    """Return True when the low_stock query param requests the low-stock filter."""
+    if raw is None:
+        return False
+    return raw.strip().lower() in ("true", "1", "yes")
+
+
 ######################################################################
 # GET INDEX
 ######################################################################
@@ -116,10 +123,13 @@ def get_inventory(inventory_id):
 ######################################################################
 @app.route("/inventory", methods=["GET"])
 def list_inventory():
-    """Returns all Inventory items"""
+    """Returns all Inventory items, optionally filtered by ?low_stock=true."""
     app.logger.info("Request for inventory list")
 
-    inventory = Inventory.all()
+    if _parse_low_stock_flag(request.args.get("low_stock")):
+        inventory = Inventory.find_low_stock()
+    else:
+        inventory = Inventory.all()
 
     results = [item.serialize() for item in inventory]
 

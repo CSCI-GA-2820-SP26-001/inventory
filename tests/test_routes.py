@@ -97,6 +97,11 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
+    def test_favicon(self):
+        """It should return 204 for /favicon.ico"""
+        resp = self.client.get("/favicon.ico")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
     def test_create_inventory(self):
         """It should create a new Inventory record"""
         test_inventory = InventoryFactory()
@@ -215,6 +220,28 @@ class TestYourResourceService(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_inventory_no_content_type(self):
+        """It should return 415 when PUT body is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="{}",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_update_inventory_no_data(self):
+        """It should return 400 when PUT body is empty or invalid JSON"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_delete_inventory(self):
         """It should delete an inventory item and return 204"""
         items = self._create_inventory_items(1)
@@ -248,3 +275,49 @@ class TestYourResourceService(TestCase):
         data = response.get_json()
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
+
+    def test_list_inventory_low_stock_true(self):
+        """GET /inventory?low_stock=true returns rows with qty <= restock_level"""
+        low1 = InventoryFactory(quantity_on_hand=2, restock_level=5)
+        low1.create()
+        low2 = InventoryFactory(quantity_on_hand=10, restock_level=10)
+        low2.create()
+        ok = InventoryFactory(quantity_on_hand=50, restock_level=5)
+        ok.create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 2)
+        ids = {row["id"] for row in data}
+        self.assertSetEqual(ids, {low1.id, low2.id})
+        for row in data:
+            self.assertLessEqual(row["quantity_on_hand"], row["restock_level"])
+
+    def test_list_inventory_low_stock_true_case_insensitive(self):
+        """low_stock accepts TRUE (case-insensitive)"""
+        InventoryFactory(quantity_on_hand=1, restock_level=10).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=TRUE")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.get_json()), 1)
+
+    def test_list_inventory_low_stock_no_matches(self):
+        """low_stock returns empty list when every item is above restock level"""
+        InventoryFactory(quantity_on_hand=100, restock_level=5).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        self.assertEqual(response.get_json(), [])
+
+    def test_list_inventory_low_stock_false_lists_all(self):
+        """low_stock=false does not apply the filter (returns full list)"""
+        InventoryFactory(quantity_on_hand=100, restock_level=5).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=false")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.get_json()), 1)

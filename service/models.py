@@ -192,3 +192,9 @@ class Inventory(db.Model):
         """
         logger.info("Processing name query for %s ...", name)
         return cls.query.filter(cls.name == name)
+
+    @classmethod
+    def find_low_stock(cls):
+        """Returns inventory where quantity_on_hand is at or below restock_level."""
+        logger.info("Processing low stock query ...")
+        return cls.query.filter(cls.quantity_on_hand <= cls.restock_level).all()
