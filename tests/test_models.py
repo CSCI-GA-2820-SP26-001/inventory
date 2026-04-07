@@ -196,6 +196,14 @@ class TestInventoryModel(TestCase):
         self.assertEqual(result.count(), 1)
         self.assertEqual(result.first().name, target)
 
+    def test_find_low_stock(self):
+        """It should return rows where quantity_on_hand <= restock_level"""
+        InventoryFactory(quantity_on_hand=3, restock_level=10).create()
+        InventoryFactory(quantity_on_hand=10, restock_level=10).create()
+        InventoryFactory(quantity_on_hand=20, restock_level=5).create()
+        found = Inventory.find_low_stock()
+        self.assertEqual(len(found), 2)
+        self.assertTrue(all(i.quantity_on_hand <= i.restock_level for i in found))
     def test_find_by_product_id(self):
         """It should return all inventories matching the given product_id"""
         pid = "prod-query-123"

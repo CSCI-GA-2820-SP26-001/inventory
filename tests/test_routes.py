@@ -276,6 +276,16 @@ class TestInventoryService(TestCase):
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
 
+    def test_list_inventory_low_stock_true(self):
+        """GET /inventory?low_stock=true returns rows with qty <= restock_level"""
+        low1 = InventoryFactory(quantity_on_hand=2, restock_level=5)
+        low1.create()
+        low2 = InventoryFactory(quantity_on_hand=10, restock_level=10)
+        low2.create()
+        ok = InventoryFactory(quantity_on_hand=50, restock_level=5)
+        ok.create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=true")
     def test_list_inventory_filter_by_product_id(self):
         """GET inventory list with product_id returns matching rows (200, JSON)"""
         sku = "SKU-TRACK-XYZ"
@@ -292,6 +302,35 @@ class TestInventoryService(TestCase):
         data = response.get_json()
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 2)
+        ids = {row["id"] for row in data}
+        self.assertSetEqual(ids, {low1.id, low2.id})
+        for row in data:
+            self.assertLessEqual(row["quantity_on_hand"], row["restock_level"])
+
+    def test_list_inventory_low_stock_true_case_insensitive(self):
+        """low_stock accepts TRUE (case-insensitive)"""
+        InventoryFactory(quantity_on_hand=1, restock_level=10).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=TRUE")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.get_json()), 1)
+
+    def test_list_inventory_low_stock_no_matches(self):
+        """low_stock returns empty list when every item is above restock level"""
+        InventoryFactory(quantity_on_hand=100, restock_level=5).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        self.assertEqual(response.get_json(), [])
+
+    def test_list_inventory_low_stock_false_lists_all(self):
+        """low_stock=false does not apply the filter (returns full list)"""
+        InventoryFactory(quantity_on_hand=100, restock_level=5).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=false")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.get_json()), 1)
         for row in data:
             self.assertEqual(row["product_id"], sku)
 

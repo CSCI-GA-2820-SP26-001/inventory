@@ -19,8 +19,13 @@ GET {{host}}/inventory
 
 ###
 
+<<<<<<< query-by-low-stock
+### List low-stock items (quantity_on_hand <= restock_level); use low_stock=true, TRUE, 1, or yes
+GET {{host}}/inventory?low_stock=true
+=======
 ### List inventory by product_id (exact match; leading/trailing spaces in param are trimmed)
 GET {{host}}/inventory?product_id=SKU-1001
+>>>>>>> master
 
 ###
 

@@ -192,7 +192,14 @@ class Inventory(db.Model):
         return cls.query.filter(cls.name == name)
 
     @classmethod
+<<<<<<< query-by-low-stock
+    def find_low_stock(cls):
+        """Returns inventory where quantity_on_hand is at or below restock_level."""
+        logger.info("Processing low stock query ...")
+        return cls.query.filter(cls.quantity_on_hand <= cls.restock_level).all()
+=======
     def find_by_product_id(cls, product_id: str):
         """Returns all Inventory rows with the given product_id (exact match)."""
         logger.info("Processing product_id query for %s ...", product_id)
         return cls.query.filter(cls.product_id == product_id).all()
+>>>>>>> master
