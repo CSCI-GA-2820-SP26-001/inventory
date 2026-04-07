@@ -39,6 +39,16 @@ GET {{host}}/inventory/{{id}}
 
 ###
 
+### Restock: increment quantity_on_hand by amount (body: { "amount": <positive int> })
+PUT {{host}}/inventory/{{id}}/restock
+Content-Type: application/json
+
+{
+  "amount": 25
+}
+
+###
+
 ### Update inventory item (full replace — all fields required, same as POST)
 PUT {{host}}/inventory/{{id}}
 Content-Type: application/json

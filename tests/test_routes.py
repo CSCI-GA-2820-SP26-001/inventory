@@ -215,6 +215,28 @@ class TestInventoryService(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_inventory_no_content_type(self):
+        """It should return 415 when PUT body is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="{}",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_update_inventory_no_data(self):
+        """It should return 400 when PUT body is empty or invalid JSON"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_delete_inventory(self):
         """It should delete an inventory item and return 204"""
         items = self._create_inventory_items(1)
