@@ -80,28 +80,29 @@ def delete_inventory_item(product_id):
     return "", status.HTTP_204_NO_CONTENT
 
 
-@app.route("/inventory/<int:inventory_id>", methods=["GET", "PUT"])
+@app.route("/inventory/<int:inventory_id>", methods=["GET"])
 def get_inventory(inventory_id):
-    """Retrieve (GET) or replace (PUT) a single Inventory item."""
-    if request.method == "PUT":
-        if not request.is_json:
-            abort(
-                status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                "Request Content-Type must be application/json",
-            )
-        data = request.get_json(silent=True)
-        if data is None:
-            raise DataValidationError("Request body must contain valid JSON")
+    """Retrieve a single Inventory item."""
+    inventory = Inventory.find(inventory_id)
+    if not inventory:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Inventory with id '{inventory_id}' was not found.",
+        )
+    return jsonify(inventory.serialize()), status.HTTP_200_OK
 
-        inventory = Inventory.find(inventory_id)
-        if not inventory:
-            abort(
-                status.HTTP_404_NOT_FOUND,
-                f"Inventory with id '{inventory_id}' was not found.",
-            )
-        inventory.deserialize(data)
-        inventory.update()
-        return jsonify(inventory.serialize()), status.HTTP_200_OK
+
+@app.route("/inventory/<int:inventory_id>", methods=["PUT"])
+def update_inventory(inventory_id):
+    """Replace a single Inventory item (full update from JSON body)."""
+    if not request.is_json:
+        abort(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Request Content-Type must be application/json",
+        )
+    data = request.get_json(silent=True)
+    if data is None:
+        raise DataValidationError("Request body must contain valid JSON")
 
     inventory = Inventory.find(inventory_id)
     if not inventory:
@@ -109,6 +110,8 @@ def get_inventory(inventory_id):
             status.HTTP_404_NOT_FOUND,
             f"Inventory with id '{inventory_id}' was not found.",
         )
+    inventory.deserialize(data)
+    inventory.update()
     return jsonify(inventory.serialize()), status.HTTP_200_OK
 
 
