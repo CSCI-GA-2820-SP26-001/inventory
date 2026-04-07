@@ -15,10 +15,9 @@
 ######################################################################
 
 """
-YourResourceModel Service
+Inventory Service
 
-This service implements a REST API that allows you to Create, Read, Update
-and Delete YourResourceModel
+REST API to create, read, update, and delete Inventory items.
 """
 
 from flask import jsonify, request, url_for, abort
@@ -52,8 +51,6 @@ def favicon():
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
-
-# Todo: Place your REST API code here ...
 
 ######################################################################
 # DELETE AN Inventory Item
