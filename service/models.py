@@ -27,9 +27,7 @@ class ItemCondition(Enum):
 
 
 class Inventory(db.Model):
-    """
-    Class that represents a YourResourceModel
-    """
+    """Represents an inventory item in the database."""
 
     ##################################################
     # Table Schema
@@ -60,7 +58,7 @@ class Inventory(db.Model):
 
     def create(self):
         """
-        Creates a YourResourceModel to the database
+        Persists a new Inventory record to the database.
         """
         logger.info("Creating %s", self.name)
         self.id = None  # pylint: disable=invalid-name
@@ -74,7 +72,7 @@ class Inventory(db.Model):
 
     def update(self):
         """
-        Updates a YourResourceModel to the database
+        Persists changes to this Inventory record.
         """
         logger.info("Saving %s", self.name)
         try:
@@ -85,7 +83,7 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def delete(self):
-        """Removes a YourResourceModel from the data store"""
+        """Remove this Inventory record from the database."""
         logger.info("Deleting %s", self.name)
         try:
             db.session.delete(self)
@@ -96,7 +94,7 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def serialize(self):
-        """Serializes a YourResourceModel into a dictionary"""
+        """Serialize this record to a dictionary."""
         return {
             "id": self.id,
             "name": self.name,
@@ -112,7 +110,7 @@ class Inventory(db.Model):
 
     def deserialize(self, data):
         """
-        Deserializes a YourResourceModel from a dictionary
+        Deserialize an Inventory item from a dictionary.
 
         Args:
             data (dict): A dictionary containing the resource data
@@ -144,13 +142,13 @@ class Inventory(db.Model):
 
     @classmethod
     def all(cls):
-        """Returns all of the YourResourceModels in the database"""
-        logger.info("Processing all YourResourceModels")
+        """Returns all of the Inventory in the database"""
+        logger.info("Processing all Inventory records")
         return cls.query.all()
 
     @classmethod
     def find(cls, by_id):
-        """Finds a YourResourceModel by it's ID"""
+        """Finds an Inventory record by its ID."""
         logger.info("Processing lookup for id %s ...", by_id)
         return cls.query.session.get(cls, by_id)
 
@@ -159,13 +157,20 @@ class Inventory(db.Model):
         """Returns all YourResourceModels with the given name
 
         Args:
-            name (string): the name of the YourResourceModels you want to match
+            name (string): the inventory name to match
         """
         logger.info("Processing name query for %s ...", name)
         return cls.query.filter(cls.name == name)
 
     @classmethod
-    def find_by_condition(cls, condition):
-        """Returns all Inventory items with the given condition"""
-        logger.info("Processing condition query for %s ...", condition)
-        return cls.query.filter(cls.condition == condition).all()
+<<<<<<< query-by-low-stock
+    def find_low_stock(cls):
+        """Returns inventory where quantity_on_hand is at or below restock_level."""
+        logger.info("Processing low stock query ...")
+        return cls.query.filter(cls.quantity_on_hand <= cls.restock_level).all()
+=======
+    def find_by_product_id(cls, product_id: str):
+        """Returns all Inventory rows with the given product_id (exact match)."""
+        logger.info("Processing product_id query for %s ...", product_id)
+        return cls.query.filter(cls.product_id == product_id).all()
+>>>>>>> master

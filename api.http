@@ -19,6 +19,16 @@ GET {{host}}/inventory
 
 ###
 
+<<<<<<< query-by-low-stock
+### List low-stock items (quantity_on_hand <= restock_level); use low_stock=true, TRUE, 1, or yes
+GET {{host}}/inventory?low_stock=true
+=======
+### List inventory by product_id (exact match; leading/trailing spaces in param are trimmed)
+GET {{host}}/inventory?product_id=SKU-1001
+>>>>>>> master
+
+###
+
 ### Create inventory item (201 + Location header)
 # @name condition must be: new | open_box | used
 POST {{host}}/inventory
@@ -36,6 +46,16 @@ Content-Type: application/json
 
 ### Get one inventory item by id (set @id above from POST response or list)
 GET {{host}}/inventory/{{id}}
+
+###
+
+### Restock: increment quantity_on_hand by amount (body: { "amount": <positive int> })
+PUT {{host}}/inventory/{{id}}/restock
+Content-Type: application/json
+
+{
+  "amount": 25
+}
 
 ###
 
