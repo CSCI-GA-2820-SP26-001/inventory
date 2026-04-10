@@ -22,7 +22,7 @@ REST API to create, read, update, and delete Inventory items.
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, DataValidationError
+from service.models import Inventory, DataValidationError, ItemCondition
 from service.common import status  # HTTP Status Codes
 
 
@@ -120,21 +120,45 @@ def update_inventory(inventory_id):
 
 
 ######################################################################
-# LIST ALL INVENTORY ITEMS
+# LIST INVENTORY ITEMS
 ######################################################################
 @app.route("/inventory", methods=["GET"])
 def list_inventory():
     """Returns all Inventory items, optionally filtered by ?product_id=<id>."""
     app.logger.info("Request for inventory list")
 
-    raw_product_id = request.args.get("product_id")
-    if raw_product_id is None:
-        inventory = Inventory.all()
+    items = []
+
+    # Parse any arguments from the query string
+    condition = request.args.get("condition")
+    product_id = request.args.get("product_id")
+    low_stock = request.args.get("low_stock")
+
+    if condition:
+        app.logger.info("Find by condition: %s", condition)
+        try:
+            condition_enum = ItemCondition(condition.lower())
+        except ValueError:
+            abort(status.HTTP_400_BAD_REQUEST, f"Invalid condition: {condition}")
+        items = Inventory.find_by_condition(condition_enum)
+
+    elif product_id:
+        app.logger.info("Find by product_id: %s", product_id)
+        items = Inventory.find_by_product_id(product_id)
+
+    elif low_stock:
+        app.logger.info("Find by low_stock: %s", low_stock)
+        low_stock_value = low_stock.lower() in ["true", "yes", "1"]
+        if low_stock_value:
+            items = Inventory.find_low_stock()
+        else:
+            items = Inventory.all()
+
     else:
-        inventory = Inventory.find_by_product_id(raw_product_id.strip())
+        app.logger.info("Find all")
+        items = Inventory.all()
 
-    results = [item.serialize() for item in inventory]
-
+    results = [item.serialize() for item in items]
     app.logger.info("Returning %d inventory items", len(results))
     return jsonify(results), status.HTTP_200_OK
 
@@ -161,9 +185,7 @@ def restock_inventory(inventory_id):
     try:
         amount = int(raw_amount)
     except (TypeError, ValueError) as exc:
-        raise DataValidationError(
-            "Invalid amount: must be a positive integer"
-        ) from exc
+        raise DataValidationError("Invalid amount: must be a positive integer") from exc
     if amount < 1:
         raise DataValidationError("Invalid amount: must be a positive integer")
 
@@ -174,9 +196,7 @@ def restock_inventory(inventory_id):
             f"Inventory with id '{inventory_id}' was not found.",
         )
 
-    app.logger.info(
-        "Restock inventory id [%s] by amount [%s]", inventory_id, amount
-    )
+    app.logger.info("Restock inventory id [%s] by amount [%s]", inventory_id, amount)
     inventory.quantity_on_hand += amount
     inventory.update()
     return jsonify(inventory.serialize()), status.HTTP_200_OK

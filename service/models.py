@@ -1,47 +1,17 @@
 """
-Models for Inventory
+Models for YourResourceModel
 
 All of the models are stored in this module
 """
 
 import logging
-from enum import Enum
-
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
+from enum import Enum
 
 logger = logging.getLogger("flask.app")
 
 # Create the SQLAlchemy object to be initialized later in init_db()
 db = SQLAlchemy()
-
-
-def _sync_inventory_id_sequence_postgres() -> None:
-    """Align SERIAL/identity sequence with MAX(id) after a delete (PostgreSQL only)."""
-    bind = db.session.get_bind()
-    if bind is None or bind.dialect.name != "postgresql":
-        return
-    try:
-        max_id = db.session.execute(
-            text("SELECT COALESCE(MAX(id), 0) FROM inventory")
-        ).scalar_one()
-        if max_id == 0:
-            db.session.execute(
-                text(
-                    "SELECT setval(pg_get_serial_sequence('inventory', 'id'), 1, false)"
-                )
-            )
-        else:
-            db.session.execute(
-                text(
-                    "SELECT setval(pg_get_serial_sequence('inventory', 'id'), :mid, true)"
-                ),
-                {"mid": max_id},
-            )
-        db.session.commit()
-    except Exception as exc:  # pylint: disable=broad-except
-        db.session.rollback()
-        logger.warning("Could not resync inventory id sequence: %s", exc)
 
 
 class DataValidationError(Exception):
@@ -118,7 +88,6 @@ class Inventory(db.Model):
         try:
             db.session.delete(self)
             db.session.commit()
-            _sync_inventory_id_sequence_postgres()
         except Exception as e:
             db.session.rollback()
             logger.error("Error deleting record: %s", self)
@@ -152,15 +121,17 @@ class Inventory(db.Model):
             self.quantity_on_hand = int(data["quantity_on_hand"])
             self.restock_level = int(data["restock_level"])
             self.condition = ItemCondition(data["condition"])
-        except KeyError as error:
-            raise DataValidationError(
-                "Invalid Inventory: missing " + error.args[0]
-            ) from error
         except ValueError as error:
             raise DataValidationError("Invalid value: " + str(error)) from error
+        except AttributeError as error:
+            raise DataValidationError("Invalid attribute: " + error.args[0]) from error
+        except KeyError as error:
+            raise DataValidationError(
+                "Invalid YourResourceModel: missing " + error.args[0]
+            ) from error
         except TypeError as error:
             raise DataValidationError(
-                "Invalid Inventory: body of request contained bad or no data "
+                "Invalid YourResourceModel: body of request contained bad or no data "
                 + str(error)
             ) from error
         return self
@@ -179,11 +150,11 @@ class Inventory(db.Model):
     def find(cls, by_id):
         """Finds an Inventory record by its ID."""
         logger.info("Processing lookup for id %s ...", by_id)
-        return db.session.get(cls, by_id)
+        return cls.query.session.get(cls, by_id)
 
     @classmethod
     def find_by_name(cls, name):
-        """Returns all Inventory with the given name
+        """Returns all YourResourceModels with the given name
 
         Args:
             name (string): the inventory name to match

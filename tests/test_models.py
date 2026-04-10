@@ -22,7 +22,7 @@ import logging
 from unittest import TestCase
 from unittest.mock import patch
 from wsgi import app
-from service.models import Inventory, DataValidationError, db
+from service.models import Inventory, DataValidationError, ItemCondition, db
 from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -142,7 +142,7 @@ class TestInventoryModel(TestCase):
         inventory = InventoryFactory.build()
         text = repr(inventory)
         self.assertIn("Inventory", text)
-        self.assertIn(str(inventory.name), text)
+        self.assertIn(str(inventory.product_id), text)
 
     def test_create_raises_when_commit_fails(self):
         """It should wrap DB failures on create as DataValidationError"""
@@ -227,3 +227,22 @@ class TestInventoryModel(TestCase):
         # See if we get back 5 items
         items = Inventory.all()
         self.assertEqual(len(items), 5)
+
+    ######################################################################
+    #  Q U E R Y   T E S T   C A S E S
+    ######################################################################
+
+    def test_find_by_condition(self):
+        """It should find Inventory items by condition"""
+        item1 = InventoryFactory(condition=ItemCondition.NEW)
+        item2 = InventoryFactory(condition=ItemCondition.NEW)
+        item3 = InventoryFactory(condition=ItemCondition.USED)
+
+        item1.create()
+        item2.create()
+        item3.create()
+
+        items = Inventory.find_by_condition(ItemCondition.NEW)
+        self.assertEqual(len(items), 2)
+        for item in items:
+            self.assertEqual(item.condition, ItemCondition.NEW)
