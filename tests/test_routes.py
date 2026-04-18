@@ -15,7 +15,7 @@
 ######################################################################
 
 """
-TestYourResourceModel API Service Test Suite
+REST API tests for the Inventory service.
 """
 
 # pylint: disable=duplicate-code
@@ -24,7 +24,7 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, Inventory
+from service.models import ItemCondition, db, Inventory
 from tests.factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -38,8 +38,8 @@ BASE_URL = "/inventory"
 #  T E S T   C A S E S
 ######################################################################
 # pylint: disable=too-many-public-methods
-class TestYourResourceService(TestCase):
-    """REST API Server Tests"""
+class TestInventoryService(TestCase):
+    """REST API server tests for Inventory."""
 
     @classmethod
     def setUpClass(cls):
@@ -96,6 +96,11 @@ class TestYourResourceService(TestCase):
         """It should call the home page"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_favicon(self):
+        """It should return 204 for /favicon.ico"""
+        resp = self.client.get("/favicon.ico")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_create_inventory(self):
         """It should create a new Inventory record"""
@@ -215,6 +220,28 @@ class TestYourResourceService(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_inventory_no_content_type(self):
+        """It should return 415 when PUT body is not application/json"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="{}",
+            content_type="text/plain",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_update_inventory_no_data(self):
+        """It should return 400 when PUT body is empty or invalid JSON"""
+        inventory = InventoryFactory()
+        inventory.create()
+        resp = self.client.put(
+            f"/inventory/{inventory.id}",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_delete_inventory(self):
         """It should delete an inventory item and return 204"""
         items = self._create_inventory_items(1)
@@ -225,9 +252,9 @@ class TestYourResourceService(TestCase):
         self.assertEqual(resp_get.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_delete_inventory_not_found(self):
-        """It should return 404 when deleting a missing inventory id"""
+        """It should return 204 when deleting a missing inventory id"""
         resp = self.client.delete("/inventory/999999")
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_list_inventory(self):
         """It should list all Inventory items"""
@@ -248,3 +275,130 @@ class TestYourResourceService(TestCase):
         data = response.get_json()
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
+
+    ######################################################################
+    # TEST QUERY INVENTORY BY CONDITION
+    ######################################################################
+    def test_query_inventory_by_condition(self):
+        """It should Query Inventory items by condition"""
+        item1 = InventoryFactory(condition=ItemCondition.NEW)
+        response = self.client.post(BASE_URL, json=item1.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        item2 = InventoryFactory(condition=ItemCondition.NEW)
+        response = self.client.post(BASE_URL, json=item2.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        item3 = InventoryFactory(condition=ItemCondition.USED)
+        response = self.client.post(BASE_URL, json=item3.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.get(f"{BASE_URL}?condition=new")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.get_json()
+        self.assertEqual(len(data), 2)
+        for item in data:
+            self.assertEqual(item["condition"], "new")
+
+    def test_query_inventory_by_condition_no_matches(self):
+        """It should return an empty list when no Inventory items match the condition"""
+        item = InventoryFactory(condition=ItemCondition.USED)
+        response = self.client.post(BASE_URL, json=item.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.get(f"{BASE_URL}?condition=new")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.get_json()
+        self.assertEqual(data, [])
+
+    def test_query_inventory_by_bad_condition(self):
+        """It should return 400 for an invalid condition query"""
+        response = self.client.get(f"{BASE_URL}?condition=invalid")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_inventory_low_stock_true(self):
+        """GET /inventory?low_stock=true returns rows with qty <= restock_level"""
+        low1 = InventoryFactory(quantity_on_hand=2, restock_level=5)
+        low1.create()
+        low2 = InventoryFactory(quantity_on_hand=10, restock_level=10)
+        low2.create()
+        ok = InventoryFactory(quantity_on_hand=50, restock_level=5)
+        ok.create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 2)
+        ids = {row["id"] for row in data}
+        self.assertSetEqual(ids, {low1.id, low2.id})
+        for row in data:
+            self.assertLessEqual(row["quantity_on_hand"], row["restock_level"])
+
+    def test_list_inventory_low_stock_true_case_insensitive(self):
+        """low_stock accepts TRUE (case-insensitive)"""
+        InventoryFactory(quantity_on_hand=1, restock_level=10).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=TRUE")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.get_json()), 1)
+
+    def test_list_inventory_low_stock_no_matches(self):
+        """low_stock returns empty list when every item is above restock level"""
+        InventoryFactory(quantity_on_hand=100, restock_level=5).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        self.assertEqual(response.get_json(), [])
+
+    def test_list_inventory_low_stock_false_lists_all(self):
+        """low_stock=false does not apply the filter (returns full list)"""
+        InventoryFactory(quantity_on_hand=100, restock_level=5).create()
+
+        response = self.client.get(f"{BASE_URL}?low_stock=false")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.get_json()), 1)
+
+    def test_list_inventory_filter_by_product_id(self):
+        """GET inventory list with product_id returns matching rows (200, JSON)"""
+        sku = "SKU-TRACK-XYZ"
+        a = InventoryFactory(product_id=sku)
+        a.create()
+        b = InventoryFactory(product_id=sku)
+        b.create()
+        InventoryFactory(product_id="OTHER-SKU").create()
+
+        response = self.client.get(f"{BASE_URL}?product_id={sku}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 2)
+        for row in data:
+            self.assertEqual(row["product_id"], sku)
+
+    def test_list_inventory_filter_product_id_no_matches(self):
+        """List filter by product_id returns empty list when nothing matches"""
+        InventoryFactory(product_id="ONLY-THIS").create()
+
+        response = self.client.get(f"{BASE_URL}?product_id=NONEXISTENT")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        data = response.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 0)
+
+    def test_list_inventory_filter_product_id_strips_whitespace(self):
+        """List filter trims whitespace on the product_id query parameter"""
+        sku = "SKU-TRIM"
+        InventoryFactory(product_id=sku).create()
+
+        response = self.client.get(f"{BASE_URL}?product_id=%20{sku}%20")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["product_id"], sku)

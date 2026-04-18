@@ -2,8 +2,9 @@
 Test Factory to make fake objects for testing
 """
 
-import factory
 from datetime import datetime
+
+import factory
 from factory.fuzzy import FuzzyChoice, FuzzyInteger
 
 from service.models import Inventory, ItemCondition

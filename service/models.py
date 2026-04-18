@@ -1,47 +1,17 @@
 """
-Models for Inventory
+Models for YourResourceModel
 
 All of the models are stored in this module
 """
 
 import logging
-from enum import Enum
-
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
+from enum import Enum
 
 logger = logging.getLogger("flask.app")
 
 # Create the SQLAlchemy object to be initialized later in init_db()
 db = SQLAlchemy()
-
-
-def _sync_inventory_id_sequence_postgres() -> None:
-    """Align SERIAL/identity sequence with MAX(id) after a delete (PostgreSQL only)."""
-    bind = db.session.get_bind()
-    if bind is None or bind.dialect.name != "postgresql":
-        return
-    try:
-        max_id = db.session.execute(
-            text("SELECT COALESCE(MAX(id), 0) FROM inventory")
-        ).scalar_one()
-        if max_id == 0:
-            db.session.execute(
-                text(
-                    "SELECT setval(pg_get_serial_sequence('inventory', 'id'), 1, false)"
-                )
-            )
-        else:
-            db.session.execute(
-                text(
-                    "SELECT setval(pg_get_serial_sequence('inventory', 'id'), :mid, true)"
-                ),
-                {"mid": max_id},
-            )
-        db.session.commit()
-    except Exception as exc:  # pylint: disable=broad-except
-        db.session.rollback()
-        logger.warning("Could not resync inventory id sequence: %s", exc)
 
 
 class DataValidationError(Exception):
@@ -57,9 +27,7 @@ class ItemCondition(Enum):
 
 
 class Inventory(db.Model):
-    """
-    Class that represents a YourResourceModel
-    """
+    """Represents an inventory item in the database."""
 
     ##################################################
     # Table Schema
@@ -90,7 +58,7 @@ class Inventory(db.Model):
 
     def create(self):
         """
-        Creates a Inventory to the database
+        Persists a new Inventory record to the database.
         """
         logger.info("Creating %s", self.name)
         self.id = None  # pylint: disable=invalid-name
@@ -104,7 +72,7 @@ class Inventory(db.Model):
 
     def update(self):
         """
-        Updates a Inventory to the database
+        Persists changes to this Inventory record.
         """
         logger.info("Saving %s", self.name)
         try:
@@ -115,19 +83,18 @@ class Inventory(db.Model):
             raise DataValidationError(e) from e
 
     def delete(self):
-        """Removes a Inventory from the data store"""
+        """Remove this Inventory record from the database."""
         logger.info("Deleting %s", self.name)
         try:
             db.session.delete(self)
             db.session.commit()
-            _sync_inventory_id_sequence_postgres()
         except Exception as e:
             db.session.rollback()
             logger.error("Error deleting record: %s", self)
             raise DataValidationError(e) from e
 
     def serialize(self):
-        """Serializes a Inventory into a dictionary"""
+        """Serialize this record to a dictionary."""
         return {
             "id": self.id,
             "name": self.name,
@@ -143,7 +110,7 @@ class Inventory(db.Model):
 
     def deserialize(self, data):
         """
-        Deserializes a Inventory item from a dictionary
+        Deserialize an Inventory item from a dictionary.
 
         Args:
             data (dict): A dictionary containing the resource data
@@ -154,15 +121,17 @@ class Inventory(db.Model):
             self.quantity_on_hand = int(data["quantity_on_hand"])
             self.restock_level = int(data["restock_level"])
             self.condition = ItemCondition(data["condition"])
-        except KeyError as error:
-            raise DataValidationError(
-                "Invalid Inventory: missing " + error.args[0]
-            ) from error
         except ValueError as error:
             raise DataValidationError("Invalid value: " + str(error)) from error
+        except AttributeError as error:
+            raise DataValidationError("Invalid attribute: " + error.args[0]) from error
+        except KeyError as error:
+            raise DataValidationError(
+                "Invalid YourResourceModel: missing " + error.args[0]
+            ) from error
         except TypeError as error:
             raise DataValidationError(
-                "Invalid Inventory: body of request contained bad or no data "
+                "Invalid YourResourceModel: body of request contained bad or no data "
                 + str(error)
             ) from error
         return self
@@ -174,21 +143,33 @@ class Inventory(db.Model):
     @classmethod
     def all(cls):
         """Returns all of the Inventory in the database"""
-        logger.info("Processing all YourResourceModels")
+        logger.info("Processing all Inventory records")
         return cls.query.all()
 
     @classmethod
     def find(cls, by_id):
-        """Finds a Inventory by it's ID"""
+        """Finds an Inventory record by its ID."""
         logger.info("Processing lookup for id %s ...", by_id)
-        return db.session.get(cls, by_id)
+        return cls.query.session.get(cls, by_id)
 
     @classmethod
     def find_by_name(cls, name):
-        """Returns all Inventory with the given name
+        """Returns all YourResourceModels with the given name
 
         Args:
-            name (string): the name of the YourResourceModels you want to match
+            name (string): the inventory name to match
         """
         logger.info("Processing name query for %s ...", name)
         return cls.query.filter(cls.name == name)
+
+    @classmethod
+    def find_low_stock(cls):
+        """Returns inventory where quantity_on_hand is at or below restock_level."""
+        logger.info("Processing low stock query ...")
+        return cls.query.filter(cls.quantity_on_hand <= cls.restock_level).all()
+
+    @classmethod
+    def find_by_product_id(cls, product_id: str):
+        """Returns all Inventory rows with the given product_id (exact match)."""
+        logger.info("Processing product_id query for %s ...", product_id)
+        return cls.query.filter(cls.product_id == product_id).all()

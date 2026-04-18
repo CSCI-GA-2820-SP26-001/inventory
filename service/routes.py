@@ -15,16 +15,22 @@
 ######################################################################
 
 """
-YourResourceModel Service
+Inventory Service
 
-This service implements a REST API that allows you to Create, Read, Update
-and Delete YourResourceModel
+REST API to create, read, update, and delete Inventory items.
 """
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Inventory, DataValidationError
+from service.models import Inventory, DataValidationError, ItemCondition
 from service.common import status  # HTTP Status Codes
+
+
+def _parse_low_stock_flag(raw: str | None) -> bool:
+    """Return True when the low_stock query param requests the low-stock filter."""
+    if raw is None:
+        return False
+    return raw.strip().lower() in ("true", "1", "yes")
 
 
 ######################################################################
@@ -53,8 +59,6 @@ def favicon():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
-# Todo: Place your REST API code here ...
-
 ######################################################################
 # DELETE AN Inventory Item
 ######################################################################
@@ -69,39 +73,20 @@ def delete_inventory_item(product_id):
     app.logger.info("Request to delete an inventory item with id [%s]", product_id)
 
     inventory = Inventory.find(product_id)
-    if not inventory:
-        abort(
-            status.HTTP_404_NOT_FOUND,
-            f"Inventory with id '{product_id}' was not found.",
+    if inventory:
+        app.logger.info("Item with ID: %d found.", product_id)
+        inventory.delete()
+    else:
+        app.logger.info(
+            "Item with ID: %d not found; returning 204 for idempotent DELETE.",
+            product_id,
         )
-    app.logger.info("Item with ID: %d found.", product_id)
-    inventory.delete()
     return "", status.HTTP_204_NO_CONTENT
 
 
-@app.route("/inventory/<int:inventory_id>", methods=["GET", "PUT"])
+@app.route("/inventory/<int:inventory_id>", methods=["GET"])
 def get_inventory(inventory_id):
-    """Retrieve (GET) or replace (PUT) a single Inventory item."""
-    if request.method == "PUT":
-        if not request.is_json:
-            abort(
-                status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                "Request Content-Type must be application/json",
-            )
-        data = request.get_json(silent=True)
-        if data is None:
-            raise DataValidationError("Request body must contain valid JSON")
-
-        inventory = Inventory.find(inventory_id)
-        if not inventory:
-            abort(
-                status.HTTP_404_NOT_FOUND,
-                f"Inventory with id '{inventory_id}' was not found.",
-            )
-        inventory.deserialize(data)
-        inventory.update()
-        return jsonify(inventory.serialize()), status.HTTP_200_OK
-
+    """Retrieve a single Inventory item."""
     inventory = Inventory.find(inventory_id)
     if not inventory:
         abort(
@@ -111,20 +96,110 @@ def get_inventory(inventory_id):
     return jsonify(inventory.serialize()), status.HTTP_200_OK
 
 
+@app.route("/inventory/<int:inventory_id>", methods=["PUT"])
+def update_inventory(inventory_id):
+    """Replace a single Inventory item (full update from JSON body)."""
+    if not request.is_json:
+        abort(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Request Content-Type must be application/json",
+        )
+    data = request.get_json(silent=True)
+    if data is None:
+        raise DataValidationError("Request body must contain valid JSON")
+
+    inventory = Inventory.find(inventory_id)
+    if not inventory:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Inventory with id '{inventory_id}' was not found.",
+        )
+    inventory.deserialize(data)
+    inventory.update()
+    return jsonify(inventory.serialize()), status.HTTP_200_OK
+
+
 ######################################################################
-# LIST ALL INVENTORY ITEMS
+# LIST INVENTORY ITEMS
 ######################################################################
 @app.route("/inventory", methods=["GET"])
 def list_inventory():
-    """Returns all Inventory items"""
+    """Returns all Inventory items, optionally filtered by ?product_id=<id>."""
     app.logger.info("Request for inventory list")
 
-    inventory = Inventory.all()
+    items = []
 
-    results = [item.serialize() for item in inventory]
+    # Parse any arguments from the query string
+    condition = request.args.get("condition")
+    product_id = request.args.get("product_id")
+    low_stock = request.args.get("low_stock")
 
+    if condition:
+        app.logger.info("Find by condition: %s", condition)
+        try:
+            condition_enum = ItemCondition(condition.lower())
+        except ValueError:
+            abort(status.HTTP_400_BAD_REQUEST, f"Invalid condition: {condition}")
+        items = Inventory.find_by_condition(condition_enum)
+
+    elif product_id:
+        app.logger.info("Find by product_id: %s", product_id)
+        items = Inventory.find_by_product_id(product_id)
+
+    elif low_stock:
+        app.logger.info("Find by low_stock: %s", low_stock)
+        low_stock_value = low_stock.lower() in ["true", "yes", "1"]
+        if low_stock_value:
+            items = Inventory.find_low_stock()
+        else:
+            items = Inventory.all()
+
+    else:
+        app.logger.info("Find all")
+        items = Inventory.all()
+
+    results = [item.serialize() for item in items]
     app.logger.info("Returning %d inventory items", len(results))
     return jsonify(results), status.HTTP_200_OK
+
+
+######################################################################
+# RESTOCK AN Inventory ITEM
+######################################################################
+@app.route("/inventory/<int:inventory_id>/restock", methods=["PUT"])
+def restock_inventory(inventory_id):
+    """Increment quantity_on_hand by a positive integer amount."""
+    if not request.is_json:
+        abort(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Request Content-Type must be application/json",
+        )
+    data = request.get_json(silent=True)
+    if data is None:
+        raise DataValidationError("Request body must contain valid JSON")
+    if "amount" not in data:
+        raise DataValidationError("Request body must include 'amount'")
+    raw_amount = data["amount"]
+    if isinstance(raw_amount, bool):
+        raise DataValidationError("Invalid amount: must be a positive integer")
+    try:
+        amount = int(raw_amount)
+    except (TypeError, ValueError) as exc:
+        raise DataValidationError("Invalid amount: must be a positive integer") from exc
+    if amount < 1:
+        raise DataValidationError("Invalid amount: must be a positive integer")
+
+    inventory = Inventory.find(inventory_id)
+    if not inventory:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Inventory with id '{inventory_id}' was not found.",
+        )
+
+    app.logger.info("Restock inventory id [%s] by amount [%s]", inventory_id, amount)
+    inventory.quantity_on_hand += amount
+    inventory.update()
+    return jsonify(inventory.serialize()), status.HTTP_200_OK
 
 
 ######################################################################

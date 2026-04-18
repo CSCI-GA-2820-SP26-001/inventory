@@ -2,11 +2,11 @@
 # Start the server first, e.g.: PORT=8080 .venv/bin/python wsgi.py
 # Change @host if you use another port.
 #
-# Use @id from GET /inventory or from the POST 201 body. After deleting all rows, the next
-# POST gets id 1 again (sequence is resynced on delete). While rows exist, match a real id.
+# Use @id from the POST response JSON ("id") or from GET /inventory. The value below is only
+# a template—if you get 404, your row id differs (fresh DB: first POST is often id 1).
 
 @host = http://127.0.0.1:8080
-@id = 6
+@id = 2
 
 
 ### Service info (root)
@@ -16,6 +16,16 @@ GET {{host}}/
 
 ### List all inventory items
 GET {{host}}/inventory
+
+###
+
+### List low-stock items (quantity_on_hand <= restock_level); use low_stock=true, TRUE, 1, or yes
+GET {{host}}/inventory?low_stock=true
+
+###
+
+### List inventory by product_id (exact match; leading/trailing spaces in param are trimmed)
+GET {{host}}/inventory?product_id=SKU-1001
 
 ###
 
@@ -36,6 +46,16 @@ Content-Type: application/json
 
 ### Get one inventory item by id (set @id above from POST response or list)
 GET {{host}}/inventory/{{id}}
+
+###
+
+### Restock: increment quantity_on_hand by amount (body: { "amount": <positive int> })
+PUT {{host}}/inventory/{{id}}/restock
+Content-Type: application/json
+
+{
+  "amount": 25
+}
 
 ###
 

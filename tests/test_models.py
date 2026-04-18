@@ -22,7 +22,7 @@ import logging
 from unittest import TestCase
 from unittest.mock import patch
 from wsgi import app
-from service.models import Inventory, DataValidationError, db
+from service.models import Inventory, DataValidationError, ItemCondition, db
 from .factories import InventoryFactory
 
 DATABASE_URI = os.getenv(
@@ -142,7 +142,7 @@ class TestInventoryModel(TestCase):
         inventory = InventoryFactory.build()
         text = repr(inventory)
         self.assertIn("Inventory", text)
-        self.assertIn(str(inventory.name), text)
+        self.assertIn(str(inventory.product_id), text)
 
     def test_create_raises_when_commit_fails(self):
         """It should wrap DB failures on create as DataValidationError"""
@@ -196,6 +196,24 @@ class TestInventoryModel(TestCase):
         self.assertEqual(result.count(), 1)
         self.assertEqual(result.first().name, target)
 
+    def test_find_low_stock(self):
+        """It should return rows where quantity_on_hand <= restock_level"""
+        InventoryFactory(quantity_on_hand=3, restock_level=10).create()
+        InventoryFactory(quantity_on_hand=10, restock_level=10).create()
+        InventoryFactory(quantity_on_hand=20, restock_level=5).create()
+        found = Inventory.find_low_stock()
+        self.assertEqual(len(found), 2)
+        self.assertTrue(all(i.quantity_on_hand <= i.restock_level for i in found))
+    def test_find_by_product_id(self):
+        """It should return all inventories matching the given product_id"""
+        pid = "prod-query-123"
+        InventoryFactory(product_id=pid).create()
+        InventoryFactory(product_id=pid).create()
+        InventoryFactory(product_id="other").create()
+        found = Inventory.find_by_product_id(pid)
+        self.assertEqual(len(found), 2)
+        self.assertTrue(all(i.product_id == pid for i in found))
+
     def test_list_all_inventory(self):
         """It should List all Inventory items in the database"""
         items = Inventory.all()
@@ -209,3 +227,22 @@ class TestInventoryModel(TestCase):
         # See if we get back 5 items
         items = Inventory.all()
         self.assertEqual(len(items), 5)
+
+    ######################################################################
+    #  Q U E R Y   T E S T   C A S E S
+    ######################################################################
+
+    def test_find_by_condition(self):
+        """It should find Inventory items by condition"""
+        item1 = InventoryFactory(condition=ItemCondition.NEW)
+        item2 = InventoryFactory(condition=ItemCondition.NEW)
+        item3 = InventoryFactory(condition=ItemCondition.USED)
+
+        item1.create()
+        item2.create()
+        item3.create()
+
+        items = Inventory.find_by_condition(ItemCondition.NEW)
+        self.assertEqual(len(items), 2)
+        for item in items:
+            self.assertEqual(item.condition, ItemCondition.NEW)
