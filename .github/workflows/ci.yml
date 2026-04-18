@@ -45,4 +45,11 @@ jobs:
         run: pipenv install --dev --deploy
 
       - name: Run unit tests
-        run: pipenv run pytest
+        run: pipenv run pytest --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: true
