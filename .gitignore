@@ -57,7 +57,9 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
-*,cover
+*.cover
+.pytest_cache/
+pytestdebug.log
 .hypothesis/
 
 # Translations
@@ -95,6 +97,7 @@ celerybeat-schedule
 
 # virtualenv
 venv/
+.venv/
 ENV/
 
 # Spyder project settings
@@ -102,3 +105,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Node.js (local installs only; this service is Python/Flask)
+node_modules/
