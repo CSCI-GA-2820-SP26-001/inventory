@@ -55,6 +55,12 @@ def favicon():
     return "", status.HTTP_204_NO_CONTENT
 
 
+@app.route("/health", methods=["GET"])
+def health():
+    """Health check for load balancers and orchestrators."""
+    return jsonify({"status": "OK"}), status.HTTP_200_OK
+
+
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
