@@ -149,6 +149,7 @@ def list_inventory():
         items = Inventory.find_by_condition(condition_enum)
 
     elif product_id:
+        product_id = product_id.strip()
         app.logger.info("Find by product_id: %s", product_id)
         items = Inventory.find_by_product_id(product_id)
 

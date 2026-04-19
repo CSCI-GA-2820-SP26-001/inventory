@@ -54,7 +54,7 @@ class Inventory(db.Model):
     )
 
     def __repr__(self):
-        return f"<Inventory {self.name} id=[{self.id}]>"
+        return f"<Inventory {self.name} product_id=[{self.product_id}] id=[{self.id}]>"
 
     def create(self):
         """
@@ -173,3 +173,9 @@ class Inventory(db.Model):
         """Returns all Inventory rows with the given product_id (exact match)."""
         logger.info("Processing product_id query for %s ...", product_id)
         return cls.query.filter(cls.product_id == product_id).all()
+
+    @classmethod
+    def find_by_condition(cls, condition: ItemCondition):
+        """Returns all Inventory rows matching the given item condition."""
+        logger.info("Processing condition query for %s ...", condition.value)
+        return cls.query.filter(cls.condition == condition).all()
