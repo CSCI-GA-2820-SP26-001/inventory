@@ -102,6 +102,12 @@ class TestInventoryService(TestCase):
         resp = self.client.get("/favicon.ico")
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
 
+    def test_health(self):
+        """It should return service health as JSON"""
+        resp = self.client.get("/health")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.get_json(), {"status": "OK"})
+
     def test_create_inventory(self):
         """It should create a new Inventory record"""
         test_inventory = InventoryFactory()

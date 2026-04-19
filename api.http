@@ -14,6 +14,11 @@ GET {{host}}/
 
 ###
 
+### Health check
+GET {{host}}/health
+
+###
+
 ### List all inventory items
 GET {{host}}/inventory
 
