@@ -97,9 +97,14 @@ Swagger/OpenAPI docs are available at:
 | `make run`     | Start the service (honcho)    |
 | `make secret`  | Generate a secret hex key     |
 
+## Continuous integration
+
+GitHub Actions runs the workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) on pushes to `master` and on pull requests. It installs dependencies, runs the test suite with coverage, and can send results to [Codecov](https://codecov.io/) when you add your upload token as the `CODECOV_TOKEN` repository secret under **Settings → Secrets and variables → Actions**.
+
 ## Project Layout
 
 ```text
+.github/workflows/  - GitHub Actions CI (tests, coverage, Codecov)
 .gitignore          - Ignores Vagrant and other metadata
 .flaskenv           - Environment variables for Flask
 .gitattributes      - Line ending handling (e.g. CRLF)
