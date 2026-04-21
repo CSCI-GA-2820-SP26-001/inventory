@@ -16,7 +16,7 @@
 
 """Inventory service routes and Flask-RESTX resources."""
 
-from flask import abort, jsonify, request
+from flask import Response, abort, jsonify, request
 from flask import current_app as app
 from flask_restx import Api, Namespace, Resource
 
@@ -52,6 +52,22 @@ def _service_info():
         ),
         status.HTTP_200_OK,
     )
+
+
+def _to_restx_payload(result):
+    """Convert Flask response tuples into Flask-RESTX serializable payloads."""
+    if not isinstance(result, tuple):
+        return result
+
+    payload = result[0]
+    if isinstance(payload, Response):
+        payload = payload.get_json()
+
+    if len(result) == 2:
+        return payload, result[1]
+    if len(result) == 3:
+        return payload, result[1], result[2]
+    return result
 
 
 def _list_inventory_impl():
@@ -194,11 +210,11 @@ class InventoryCollectionResource(Resource):
 
     def get(self):
         """List inventory records."""
-        return _list_inventory_impl()
+        return _to_restx_payload(_list_inventory_impl())
 
     def post(self):
         """Create an inventory record."""
-        return _create_inventory_impl()
+        return _to_restx_payload(_create_inventory_impl())
 
 
 @inventory_ns.route("/<int:inventory_id>")
@@ -207,15 +223,15 @@ class InventoryItemResource(Resource):
 
     def get(self, inventory_id: int):
         """Retrieve an inventory record by id."""
-        return _get_inventory_impl(inventory_id)
+        return _to_restx_payload(_get_inventory_impl(inventory_id))
 
     def put(self, inventory_id: int):
         """Update an inventory record by id."""
-        return _update_inventory_impl(inventory_id)
+        return _to_restx_payload(_update_inventory_impl(inventory_id))
 
     def delete(self, inventory_id: int):
         """Delete an inventory record by id."""
-        return _delete_inventory_impl(inventory_id)
+        return _to_restx_payload(_delete_inventory_impl(inventory_id))
 
 
 @inventory_ns.route("/<int:inventory_id>/restock")
@@ -224,7 +240,7 @@ class InventoryRestockResource(Resource):
 
     def put(self, inventory_id: int):
         """Increase inventory quantity_on_hand by amount."""
-        return _restock_inventory_impl(inventory_id)
+        return _to_restx_payload(_restock_inventory_impl(inventory_id))
 
 
 @app.route("/")
