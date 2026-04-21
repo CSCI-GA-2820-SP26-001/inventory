@@ -408,3 +408,47 @@ class TestInventoryService(TestCase):
         data = response.get_json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["product_id"], sku)
+
+    def test_api_list_inventory(self):
+        """It should list inventory using /api/inventory route."""
+        self._create_inventory_items(2)
+        response = self.client.get("/api/inventory")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.is_json)
+        self.assertEqual(len(response.get_json()), 2)
+
+    def test_api_inventory_item_crud(self):
+        """It should support item CRUD via /api/inventory/<id> routes."""
+        created = InventoryFactory()
+        create_resp = self.client.post("/api/inventory", json=created.serialize())
+        self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED)
+        item_id = create_resp.get_json()["id"]
+
+        get_resp = self.client.get(f"/api/inventory/{item_id}")
+        self.assertEqual(get_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_resp.get_json()["id"], item_id)
+
+        update_payload = {
+            "name": "api-updated",
+            "product_id": "API-SKU-1",
+            "quantity_on_hand": 12,
+            "restock_level": 3,
+            "condition": "open_box",
+        }
+        update_resp = self.client.put(f"/api/inventory/{item_id}", json=update_payload)
+        self.assertEqual(update_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_resp.get_json()["name"], update_payload["name"])
+
+        delete_resp = self.client.delete(f"/api/inventory/{item_id}")
+        self.assertEqual(delete_resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_api_restock_inventory(self):
+        """It should restock an item using /api/inventory/<id>/restock."""
+        inventory = InventoryFactory(quantity_on_hand=2, restock_level=1)
+        inventory.create()
+        response = self.client.put(
+            f"/api/inventory/{inventory.id}/restock",
+            json={"amount": 5},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.get_json()["quantity_on_hand"], 7)

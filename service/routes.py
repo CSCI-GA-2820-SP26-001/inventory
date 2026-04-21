@@ -16,11 +16,12 @@
 
 """Inventory service routes and Flask-RESTX resources."""
 
-from flask import jsonify, request, abort
+from flask import abort, jsonify, request
 from flask import current_app as app
 from flask_restx import Api, Namespace, Resource
-from service.models import Inventory, DataValidationError, ItemCondition
+
 from service.common import status
+from service.models import DataValidationError, Inventory, ItemCondition
 
 api = Api(
     app,
@@ -59,21 +60,6 @@ def _list_inventory_impl():
     condition = request.args.get("condition")
     product_id = request.args.get("product_id")
     low_stock = request.args.get("low_stock")
-@app.route("/favicon.ico")
-def favicon():
-    """Browsers request this automatically; avoid noisy 404s in logs."""
-    return "", status.HTTP_204_NO_CONTENT
-
-
-@app.route("/health", methods=["GET"])
-def health():
-    """Health check for load balancers and orchestrators."""
-    return jsonify({"status": "OK"}), status.HTTP_200_OK
-
-
-######################################################################
-#  R E S T   A P I   E N D P O I N T S
-######################################################################
 
     if condition:
         app.logger.info("Find by condition: %s", condition)
@@ -160,42 +146,6 @@ def _delete_inventory_impl(inventory_id: int):
     if inventory:
         app.logger.info("Item with ID: %d found.", inventory_id)
         inventory.delete()
-######################################################################
-# LIST INVENTORY ITEMS
-######################################################################
-@app.route("/inventory", methods=["GET"])
-def list_inventory():
-    """Returns all Inventory items, optionally filtered by ?product_id=<id>."""
-    app.logger.info("Request for inventory list")
-
-    items = []
-
-    # Parse any arguments from the query string
-    condition = request.args.get("condition")
-    product_id = request.args.get("product_id")
-    low_stock = request.args.get("low_stock")
-
-    if condition:
-        app.logger.info("Find by condition: %s", condition)
-        try:
-            condition_enum = ItemCondition(condition.lower())
-        except ValueError:
-            abort(status.HTTP_400_BAD_REQUEST, f"Invalid condition: {condition}")
-        items = Inventory.find_by_condition(condition_enum)
-
-    elif product_id:
-        product_id = product_id.strip()
-        app.logger.info("Find by product_id: %s", product_id)
-        items = Inventory.find_by_product_id(product_id)
-
-    elif low_stock:
-        app.logger.info("Find by low_stock: %s", low_stock)
-        low_stock_value = low_stock.lower() in ["true", "yes", "1"]
-        if low_stock_value:
-            items = Inventory.find_low_stock()
-        else:
-            items = Inventory.all()
-
     else:
         app.logger.info(
             "Item with ID: %d not found; returning 204 for idempotent DELETE.",
@@ -243,9 +193,11 @@ class InventoryCollectionResource(Resource):
     """Inventory collection resource."""
 
     def get(self):
+        """List inventory records."""
         return _list_inventory_impl()
 
     def post(self):
+        """Create an inventory record."""
         return _create_inventory_impl()
 
 
@@ -254,12 +206,15 @@ class InventoryItemResource(Resource):
     """Inventory item resource."""
 
     def get(self, inventory_id: int):
+        """Retrieve an inventory record by id."""
         return _get_inventory_impl(inventory_id)
 
     def put(self, inventory_id: int):
+        """Update an inventory record by id."""
         return _update_inventory_impl(inventory_id)
 
     def delete(self, inventory_id: int):
+        """Delete an inventory record by id."""
         return _delete_inventory_impl(inventory_id)
 
 
@@ -268,6 +223,7 @@ class InventoryRestockResource(Resource):
     """Inventory restock action resource."""
 
     def put(self, inventory_id: int):
+        """Increase inventory quantity_on_hand by amount."""
         return _restock_inventory_impl(inventory_id)
 
 
