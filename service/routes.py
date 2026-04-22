@@ -66,7 +66,7 @@ def health():
 ######################################################################
 @app.route("/ui", methods=["GET"])
 def inventory_ui():
-    """Serve a minimal UI to create inventory items."""
+    """Serve a single-page inventory admin UI."""
     return render_template("inventory_ui.html"), status.HTTP_200_OK
 
 
