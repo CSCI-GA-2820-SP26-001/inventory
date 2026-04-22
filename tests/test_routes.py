@@ -108,6 +108,26 @@ class TestInventoryService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.get_json(), {"status": "OK"})
 
+    def test_inventory_ui_retrieve_controls(self):
+        """It should provide retrieve-by-id controls in the UI."""
+        resp = self.client.get("/ui")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        page = resp.get_data(as_text=True)
+        self.assertIn('id="get-inventory-form"', page)
+        self.assertIn('id="get-id" name="id" type="number" min="1" required', page)
+        self.assertIn('id="retrieve-button" type="submit">Retrieve</button>', page)
+
+    def test_inventory_ui_retrieve_wiring_and_not_found_message(self):
+        """It should wire retrieve flow and show a clear not found message."""
+        resp = self.client.get("/ui")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        page = resp.get_data(as_text=True)
+        self.assertIn('getForm.addEventListener("submit"', page)
+        self.assertIn('const data = await requestJson(`/inventory/${id}`, { method: "GET" });', page)
+        self.assertIn('setSuccess("Inventory item retrieved successfully.", data);', page)
+        self.assertIn('if (error.status === 404)', page)
+        self.assertIn('setError(new Error("Inventory item not found."));', page)
+
     def test_create_inventory(self):
         """It should create a new Inventory record"""
         test_inventory = InventoryFactory()
