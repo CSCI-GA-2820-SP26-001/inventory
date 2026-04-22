@@ -6,7 +6,7 @@
 [![CI](https://github.com/CSCI-GA-2820-SP26-001/inventory/actions/workflows/ci.yml/badge.svg)](https://github.com/CSCI-GA-2820-SP26-001/inventory/actions)
 [![codecov](https://codecov.io/gh/CSCI-GA-2820-SP26-001/inventory/branch/master/graph/badge.svg)](https://codecov.io/gh/CSCI-GA-2820-SP26-001/inventory)
 
-A REST API service for managing inventory items. Built with Flask and SQLAlchemy.
+A REST API service for managing inventory items. Built with Flask, Flask-RESTX, and SQLAlchemy.
 
 ## Overview
 
@@ -53,6 +53,26 @@ Press the **Use this template** button on GitHub to create your own repository f
    cp .gitattributes ../<your_repo_folder>/
    ```
 
+### Pipenv troubleshooting (macOS/Linux)
+
+If you see `zsh: command not found: pipenv`, install Pipenv first:
+
+```bash
+python3 -m pip install --user pipenv
+```
+
+Or with Homebrew:
+
+```bash
+brew install pipenv
+```
+
+Then verify:
+
+```bash
+pipenv --version
+```
+
 ## Running the Service
 
 ```bash
@@ -62,6 +82,10 @@ make run
 ```
 
 The API will be available at the URL configured in `.flaskenv` (default typically `http://localhost:8000`).
+
+Swagger/OpenAPI docs are available at:
+
+- `http://localhost:8000/api/docs`
 
 ## Development
 
@@ -110,7 +134,23 @@ tests/
 
 ## API Summary
 
-The service exposes a REST API to create, read, update, and delete **Inventory** records, plus **restock** (`PUT /inventory/<id>/restock` with JSON `{"amount": <positive integer>}`) to increase `quantity_on_hand`. Each record includes:
+The primary API is exposed under the `/api` prefix using Flask-RESTX:
+
+- `GET /api/inventory`
+- `POST /api/inventory`
+- `GET /api/inventory/<id>`
+- `PUT /api/inventory/<id>`
+- `DELETE /api/inventory/<id>`
+- `PUT /api/inventory/<id>/restock` with JSON `{"amount": <positive integer>}`
+
+Health endpoints:
+
+- `GET /health`
+- `GET /api/health`
+
+For backward compatibility, legacy non-prefixed `/inventory` routes are still available.
+
+Each record includes:
 
 - **name** — Item name
 - **product_id** — Product identifier
@@ -119,7 +159,18 @@ The service exposes a REST API to create, read, update, and delete **Inventory**
 - **condition** — One of: `new`, `open_box`, `used`
 - **created_at** / **last_updated** — Timestamps (managed by the service)
 
-Use the root URL (`/`) for a simple service description. Full CRUD endpoints are defined in `service/routes.py`.
+Use the root URL (`/`) for a simple service description. Full endpoints are defined in `service/routes.py`.
+
+## Kubernetes Manifests
+
+Kubernetes manifests are included for both the application and PostgreSQL:
+
+- `k8s/deployment.yaml` - Inventory app Deployment (includes readiness/liveness probe on `/health`)
+- `k8s/service.yaml` - ClusterIP Service for the app
+- `k8s/ingress.yaml` - Ingress routing to the app Service
+- `k8s/postgres/statefulset.yaml` - PostgreSQL StatefulSet
+- `k8s/postgres/service.yaml` - Headless Service for PostgreSQL
+- `k8s/postgres/pvc.yaml` - PersistentVolumeClaim for PostgreSQL data
 
 ## License
 
