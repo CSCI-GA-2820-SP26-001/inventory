@@ -20,7 +20,7 @@ Inventory Service
 REST API to create, read, update, and delete Inventory items.
 """
 
-from flask import jsonify, request, url_for, abort
+from flask import jsonify, request, url_for, abort, render_template
 from flask import current_app as app  # Import Flask application
 from service.models import Inventory, DataValidationError, ItemCondition
 from service.common import status  # HTTP Status Codes
@@ -59,6 +59,15 @@ def favicon():
 def health():
     """Health check for load balancers and orchestrators."""
     return jsonify({"status": "OK"}), status.HTTP_200_OK
+
+
+######################################################################
+# INVENTORY UI
+######################################################################
+@app.route("/ui", methods=["GET"])
+def inventory_ui():
+    """Serve a minimal UI to create inventory items."""
+    return render_template("inventory_ui.html"), status.HTTP_200_OK
 
 
 ######################################################################

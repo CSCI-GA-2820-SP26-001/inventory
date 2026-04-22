@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inventory Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; max-width: 720px; }
+        h1 { margin-bottom: 1rem; }
+        form { display: grid; gap: 0.75rem; }
+        label { font-weight: 600; }
+        input, select, button { padding: 0.5rem; font-size: 1rem; }
+        button { width: 9rem; cursor: pointer; }
+        .message { margin-top: 1rem; font-weight: 600; }
+        .success { color: #1b6b1b; }
+        .error { color: #b32727; }
+        pre { background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Create Inventory Item</h1>
+    <form id="create-inventory-form">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" required>
+
+        <label for="product_id">Product ID</label>
+        <input id="product_id" name="product_id" type="text" required>
+
+        <label for="quantity_on_hand">Quantity On Hand</label>
+        <input id="quantity_on_hand" name="quantity_on_hand" type="number" min="0" required>
+
+        <label for="restock_level">Restock Level</label>
+        <input id="restock_level" name="restock_level" type="number" min="0" required>
+
+        <label for="condition">Condition</label>
+        <select id="condition" name="condition" required>
+            <option value="new">new</option>
+            <option value="open_box">open_box</option>
+            <option value="used">used</option>
+        </select>
+
+        <button id="create-button" type="submit">Create</button>
+    </form>
+
+    <div id="message" class="message" role="status" aria-live="polite"></div>
+
+    <h2>Created Inventory Item</h2>
+    <pre id="created-item">No item created yet.</pre>
+
+    <script>
+        const form = document.getElementById("create-inventory-form");
+        const messageEl = document.getElementById("message");
+        const createdItemEl = document.getElementById("created-item");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            messageEl.textContent = "";
+            messageEl.className = "message";
+
+            const payload = {
+                name: form.name.value.trim(),
+                product_id: form.product_id.value.trim(),
+                quantity_on_hand: Number(form.quantity_on_hand.value),
+                restock_level: Number(form.restock_level.value),
+                condition: form.condition.value
+            };
+
+            try {
+                const response = await fetch("/inventory", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const responseData = await response.json();
+                if (!response.ok) {
+                    throw new Error(responseData.message || "Failed to create inventory item");
+                }
+
+                messageEl.textContent = "Inventory item created successfully.";
+                messageEl.classList.add("success");
+                createdItemEl.textContent = JSON.stringify(responseData, null, 2);
+            } catch (error) {
+                messageEl.textContent = error.message;
+                messageEl.classList.add("error");
+            }
+        });
+    </script>
+</body>
+</html>

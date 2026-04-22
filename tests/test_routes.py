@@ -108,6 +108,15 @@ class TestInventoryService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.get_json(), {"status": "OK"})
 
+    def test_inventory_ui_page(self):
+        """It should serve the inventory UI with a create form."""
+        resp = self.client.get("/ui")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        page = resp.get_data(as_text=True)
+        self.assertIn("Create Inventory Item", page)
+        self.assertIn('id="create-inventory-form"', page)
+        self.assertIn('fetch("/inventory"', page)
+
     def test_create_inventory(self):
         """It should create a new Inventory record"""
         test_inventory = InventoryFactory()
