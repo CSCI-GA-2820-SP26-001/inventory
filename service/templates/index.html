@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            display: none;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        #empty-message {
+            display: none;
+            padding: 20px;
+            background-color: white;
+            text-align: center;
+            color: #666;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        #error-message {
+            display: none;
+            padding: 20px;
+            background-color: #ffdddd;
+            color: #a00;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Inventory Management</h1>
+
+    <div class="controls">
+        <button id="list-btn" onclick="listInventory()">List All Inventory</button>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="empty-message">No inventory items found.</div>
+
+    <table id="inventory-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Condition</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody id="inventory-body">
+        </tbody>
+    </table>
+
+    <script>
+        function listInventory() {
+            const table = document.getElementById("inventory-table");
+            const tbody = document.getElementById("inventory-body");
+            const emptyMsg = document.getElementById("empty-message");
+            const errorMsg = document.getElementById("error-message");
+
+            table.style.display = "none";
+            emptyMsg.style.display = "none";
+            errorMsg.style.display = "none";
+            tbody.innerHTML = "";
+
+            fetch("/api/inventory")
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error("Server error: " + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(items) {
+                    if (items.length === 0) {
+                        emptyMsg.style.display = "block";
+                        return;
+                    }
+                    items.forEach(function(item) {
+                        const row = document.createElement("tr");
+                        row.innerHTML =
+                            "<td>" + item.id + "</td>" +
+                            "<td>" + item.name + "</td>" +
+                            "<td>" + item.condition + "</td>" +
+                            "<td>" + item.quantity + "</td>";
+                        tbody.appendChild(row);
+                    });
+                    table.style.display = "table";
+                })
+                .catch(function(err) {
+                    errorMsg.textContent = "Failed to load inventory: " + err.message;
+                    errorMsg.style.display = "block";
+                });
+        }
+    </script>
+</body>
+</html>

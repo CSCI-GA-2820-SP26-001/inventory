@@ -1,30 +1,13 @@
-######################################################################
-# Copyright 2016, 2024 John J. Rofrano. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-######################################################################
-
 """
-YourResourceModel Service
+Inventory Service
 
-This service implements a REST API that allows you to Create, Read, Update
-and Delete YourResourceModel
+This service implements a REST API for managing inventory items.
 """
 
-from flask import jsonify, request, url_for, abort
-from flask import current_app as app  # Import Flask application
-from service.models import YourResourceModel
-from service.common import status  # HTTP Status Codes
+from flask import jsonify, render_template
+from flask import current_app as app
+from service.models import InventoryItem
+from service.common import status
 
 
 ######################################################################
@@ -32,15 +15,20 @@ from service.common import status  # HTTP Status Codes
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
-    return (
-        "Reminder: return some useful information in json format about the service here",
-        status.HTTP_200_OK,
-    )
+    """Serve the inventory management UI"""
+    return render_template("index.html")
 
 
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
-# Todo: Place your REST API code here ...
+
+@app.route("/api/inventory", methods=["GET"])
+def list_inventory():
+    """Returns all inventory items"""
+    app.logger.info("Request to list all inventory items")
+    items = InventoryItem.all()
+    results = [item.serialize() for item in items]
+    app.logger.info("Returning %d inventory items", len(results))
+    return jsonify(results), status.HTTP_200_OK
