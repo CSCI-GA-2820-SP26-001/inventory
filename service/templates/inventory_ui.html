@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inventory Admin</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        max-width: 980px;
+      }
+      h1 {
+        margin-bottom: 0.5rem;
+      }
+      section {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 1rem 0;
+      }
+      form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        gap: 0.6rem 1rem;
+      }
+      form .full-width {
+        grid-column: 1 / -1;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        padding: 0.45rem;
+      }
+      #message {
+        min-height: 1.4rem;
+        font-weight: 700;
+      }
+      #result-display {
+        background: #fafafa;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 0.75rem;
+        white-space: pre-wrap;
+        overflow-x: auto;
+      }
+      .error {
+        color: #a00;
+      }
+      .success {
+        color: #0a5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Inventory Admin</h1>
+    <p>Use this page to manage inventory without calling the API manually.</p>
+
+    <p id="message"></p>
+    <pre id="result-display">No results yet.</pre>
+
+    <section>
+      <h2>Create inventory</h2>
+      <form id="create-inventory-form">
+        <div>
+          <label for="create-name">Name</label>
+          <input id="create-name" name="name" type="text" required>
+        </div>
+        <div>
+          <label for="create-product_id">Product ID</label>
+          <input id="create-product_id" name="product_id" type="text" required>
+        </div>
+        <div>
+          <label for="create-quantity_on_hand">Quantity on hand</label>
+          <input id="create-quantity_on_hand" name="quantity_on_hand" type="number" min="0" required>
+        </div>
+        <div>
+          <label for="create-restock_level">Restock level</label>
+          <input id="create-restock_level" name="restock_level" type="number" min="0" required>
+        </div>
+        <div class="full-width">
+          <label for="create-condition">Condition</label>
+          <select id="create-condition" name="condition" required>
+            <option value="new">new</option>
+            <option value="open_box">open_box</option>
+            <option value="used">used</option>
+          </select>
+        </div>
+        <div class="full-width">
+          <button id="create-button" type="submit">Create</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>Get inventory by id</h2>
+      <form id="get-inventory-form">
+        <div>
+          <label for="get-id">Inventory ID</label>
+          <input id="get-id" name="id" type="number" min="1" required>
+        </div>
+        <div class="full-width">
+          <button type="submit">Get</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>Update inventory</h2>
+      <form id="update-inventory-form">
+        <div>
+          <label for="update-id">Inventory ID</label>
+          <input id="update-id" name="id" type="number" min="1" required>
+        </div>
+        <div>
+          <label for="update-name">Name</label>
+          <input id="update-name" name="name" type="text" required>
+        </div>
+        <div>
+          <label for="update-product_id">Product ID</label>
+          <input id="update-product_id" name="product_id" type="text" required>
+        </div>
+        <div>
+          <label for="update-quantity_on_hand">Quantity on hand</label>
+          <input id="update-quantity_on_hand" name="quantity_on_hand" type="number" min="0" required>
+        </div>
+        <div>
+          <label for="update-restock_level">Restock level</label>
+          <input id="update-restock_level" name="restock_level" type="number" min="0" required>
+        </div>
+        <div>
+          <label for="update-condition">Condition</label>
+          <select id="update-condition" name="condition" required>
+            <option value="new">new</option>
+            <option value="open_box">open_box</option>
+            <option value="used">used</option>
+          </select>
+        </div>
+        <div class="full-width">
+          <button type="submit">Update</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>Delete inventory</h2>
+      <form id="delete-inventory-form">
+        <div>
+          <label for="delete-id">Inventory ID</label>
+          <input id="delete-id" name="id" type="number" min="1" required>
+        </div>
+        <div class="full-width">
+          <button type="submit">Delete</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>Restock inventory</h2>
+      <form id="restock-inventory-form">
+        <div>
+          <label for="restock-id">Inventory ID</label>
+          <input id="restock-id" name="id" type="number" min="1" required>
+        </div>
+        <div>
+          <label for="restock-amount">Amount</label>
+          <input id="restock-amount" name="amount" type="number" min="1" required>
+        </div>
+        <div class="full-width">
+          <button type="submit">Restock</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>List inventory</h2>
+      <form id="list-inventory-form">
+        <div>
+          <label for="list-condition">Condition (optional)</label>
+          <select id="list-condition" name="condition">
+            <option value="">(all)</option>
+            <option value="new">new</option>
+            <option value="open_box">open_box</option>
+            <option value="used">used</option>
+          </select>
+        </div>
+        <div>
+          <label for="list-product_id">Product ID (optional)</label>
+          <input id="list-product_id" name="product_id" type="text">
+        </div>
+        <div>
+          <label for="list-low_stock">Low stock only</label>
+          <select id="list-low_stock" name="low_stock">
+            <option value="">no</option>
+            <option value="true">yes</option>
+          </select>
+        </div>
+        <div class="full-width">
+          <button type="submit">List</button>
+        </div>
+      </form>
+    </section>
+
+    <script>
+      const messageEl = document.getElementById("message");
+      const resultEl = document.getElementById("result-display");
+
+      function setResult(data) {
+        resultEl.textContent = JSON.stringify(data, null, 2);
+      }
+
+      function setError(message, data = null) {
+        messageEl.className = "error";
+        messageEl.textContent = message;
+        if (data !== null) {
+          setResult(data);
+        }
+      }
+
+      function setSuccess(message, data = null) {
+        messageEl.className = "success";
+        messageEl.textContent = message;
+        if (data !== null) {
+          setResult(data);
+        }
+      }
+
+      async function requestJson(url, options = {}) {
+        const response = await fetch(url, options);
+        let payload = null;
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          payload = await response.json();
+        }
+
+        if (!response.ok) {
+          const errorMessage =
+            payload && (payload.message || payload.error)
+              ? payload.message || payload.error
+              : `Request failed with status ${response.status}`;
+          throw new Error(errorMessage);
+        }
+        return payload;
+      }
+
+      const createForm = document.getElementById("create-inventory-form");
+      createForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+          const data = await requestJson("/inventory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: document.getElementById("create-name").value,
+              product_id: document.getElementById("create-product_id").value,
+              quantity_on_hand: Number(document.getElementById("create-quantity_on_hand").value),
+              restock_level: Number(document.getElementById("create-restock_level").value),
+              condition: document.getElementById("create-condition").value
+            })
+          });
+          setSuccess("Inventory item created successfully.", data);
+        } catch (error) {
+          setError(error.message);
+        }
+      });
+
+      const getForm = document.getElementById("get-inventory-form");
+      getForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const inventoryId = document.getElementById("get-id").value;
+        try {
+          const data = await requestJson(`/inventory/${inventoryId}`);
+          setSuccess("Inventory item retrieved successfully.", data);
+        } catch (error) {
+          setError(error.message);
+        }
+      });
+
+      const updateForm = document.getElementById("update-inventory-form");
+      updateForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const inventoryId = document.getElementById("update-id").value;
+        try {
+          const data = await requestJson(`/inventory/${inventoryId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: document.getElementById("update-name").value,
+              product_id: document.getElementById("update-product_id").value,
+              quantity_on_hand: Number(document.getElementById("update-quantity_on_hand").value),
+              restock_level: Number(document.getElementById("update-restock_level").value),
+              condition: document.getElementById("update-condition").value
+            })
+          });
+          setSuccess("Inventory item updated successfully.", data);
+        } catch (error) {
+          setError(error.message);
+        }
+      });
+
+      const deleteForm = document.getElementById("delete-inventory-form");
+      deleteForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const inventoryId = document.getElementById("delete-id").value;
+        try {
+          await requestJson(`/inventory/${inventoryId}`, {
+            method: "DELETE"
+          });
+          setSuccess("Inventory item deleted successfully.", { id: Number(inventoryId) });
+        } catch (error) {
+          setError(error.message);
+        }
+      });
+
+      const restockForm = document.getElementById("restock-inventory-form");
+      restockForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const inventoryId = document.getElementById("restock-id").value;
+        try {
+          const data = await requestJson(`/inventory/${inventoryId}/restock`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: Number(document.getElementById("restock-amount").value)
+            })
+          });
+          setSuccess("Inventory item restocked successfully.", data);
+        } catch (error) {
+          setError(error.message);
+        }
+      });
+
+      const listForm = document.getElementById("list-inventory-form");
+      listForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const params = new URLSearchParams();
+        const condition = document.getElementById("list-condition").value;
+        const productId = document.getElementById("list-product_id").value.trim();
+        const lowStock = document.getElementById("list-low_stock").value;
+
+        if (condition) params.append("condition", condition);
+        if (productId) params.append("product_id", productId);
+        if (lowStock) params.append("low_stock", lowStock);
+
+        const query = params.toString();
+        const url = query ? `/inventory?${query}` : "/inventory";
+
+        try {
+          const data = await requestJson(url);
+          setSuccess("Inventory list retrieved successfully.", data);
+        } catch (error) {
+          setError(error.message);
+        }
+      });
+    </script>
+  </body>
+</html>
