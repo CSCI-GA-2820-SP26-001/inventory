@@ -20,6 +20,10 @@ from flask import Response, abort, jsonify, request
 from flask import current_app as app
 from flask_restx import Api, Namespace, Resource
 
+from flask import jsonify, request, url_for, abort, render_template
+from flask import current_app as app  # Import Flask application
+from service.models import Inventory, DataValidationError, ItemCondition
+from service.common import status  # HTTP Status Codes
 from service.common import status
 from service.models import DataValidationError, Inventory, ItemCondition
 
@@ -70,6 +74,18 @@ def _to_restx_payload(result):
     return result
 
 
+######################################################################
+# INVENTORY UI
+######################################################################
+@app.route("/ui", methods=["GET"])
+def inventory_ui():
+    """Serve a single-page inventory admin UI."""
+    return render_template("inventory_ui.html"), status.HTTP_200_OK
+
+
+######################################################################
+#  R E S T   A P I   E N D P O I N T S
+######################################################################
 def _list_inventory_impl():
     """Returns all Inventory items, optionally filtered by query params."""
     app.logger.info("Request for inventory list")
