@@ -124,6 +124,39 @@ class TestInventoryService(TestCase):
         self.assertIn('id="result-display"', page)
         self.assertIn('fetch("/inventory"', page)
 
+    def test_inventory_ui_create_flow_elements(self):
+        """It should provide create flow inputs, request wiring, and result feedback."""
+        resp = self.client.get("/ui")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        page = resp.get_data(as_text=True)
+
+        # Required input fields for creating an item
+        self.assertIn('id="create-name" name="name" type="text" required', page)
+        self.assertIn(
+            'id="create-product_id" name="product_id" type="text" required', page
+        )
+        self.assertIn(
+            'id="create-quantity_on_hand" name="quantity_on_hand" type="number" min="0" required',
+            page,
+        )
+        self.assertIn(
+            'id="create-restock_level" name="restock_level" type="number" min="0" required',
+            page,
+        )
+        self.assertIn('id="create-condition" name="condition" required', page)
+        self.assertIn('id="create-button" type="submit">Create</button>', page)
+
+        # Create request sent to backend
+        self.assertIn('createForm.addEventListener("submit"', page)
+        self.assertIn('const data = await requestJson("/inventory", {', page)
+        self.assertIn('method: "POST"', page)
+        self.assertIn('headers: { "Content-Type": "application/json" }', page)
+
+        # Success and created item display
+        self.assertIn('setSuccess("Inventory item created successfully.", data);', page)
+        self.assertIn('id="message"', page)
+        self.assertIn('id="result-display"', page)
+
     def test_create_inventory(self):
         """It should create a new Inventory record"""
         test_inventory = InventoryFactory()
