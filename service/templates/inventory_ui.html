@@ -48,6 +48,11 @@
         </section>
 
         <section class="card">
+            <h2>Retrieve Item</h2>
+            <form id="get-inventory-form">
+                <label for="get-id">Inventory ID</label>
+                <input id="get-id" name="id" type="number" min="1" required>
+                <button id="retrieve-button" type="submit">Retrieve</button>
             <h2>Get Item</h2>
             <form id="get-inventory-form">
                 <label for="get-id">Inventory ID</label>
@@ -161,6 +166,9 @@
                 const message = responseData && responseData.message
                     ? responseData.message
                     : `Request failed with status ${response.status}`;
+                const error = new Error(message);
+                error.status = response.status;
+                throw error;
                 throw new Error(message);
             }
 
@@ -195,6 +203,13 @@
             const id = Number(getForm.id.value);
             try {
                 const data = await requestJson(`/inventory/${id}`, { method: "GET" });
+                setSuccess("Inventory item retrieved successfully.", data);
+            } catch (error) {
+                if (error.status === 404) {
+                    setError(new Error("Inventory item not found."));
+                } else {
+                    setError(error);
+                }
                 setSuccess("Inventory item loaded.", data);
             } catch (error) {
                 setError(error);
