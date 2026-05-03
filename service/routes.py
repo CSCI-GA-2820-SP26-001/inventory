@@ -1,3 +1,13 @@
+"""
+Inventory Service
+
+This service implements a REST API for managing inventory items.
+"""
+
+from flask import jsonify, render_template
+from flask import current_app as app
+from service.models import InventoryItem
+from service.common import status
 ######################################################################
 # Copyright 2016, 2024 John J. Rofrano. All Rights Reserved.
 #
@@ -38,6 +48,13 @@ api = Api(
 inventory_ns = Namespace("inventory", description="Inventory operations", path="/inventory")
 api.add_namespace(inventory_ns)
 
+######################################################################
+# GET INDEX
+######################################################################
+@app.route("/")
+def index():
+    """Serve the inventory management UI"""
+    return render_template("index.html")
 
 def _parse_low_stock_flag(raw: str | None) -> bool:
     """Return True when the low_stock query param requests the low-stock filter."""
@@ -315,6 +332,15 @@ def delete_inventory_item(inventory_id):
     return _delete_inventory_impl(inventory_id)
 
 
+
+@app.route("/api/inventory", methods=["GET"])
+def list_inventory():
+    """Returns all inventory items"""
+    app.logger.info("Request to list all inventory items")
+    items = InventoryItem.all()
+    results = [item.serialize() for item in items]
+    app.logger.info("Returning %d inventory items", len(results))
+    return jsonify(results), status.HTTP_200_OK
 @app.route("/inventory/<int:inventory_id>/restock", methods=["PUT"])
 def restock_inventory(inventory_id):
     """Compatibility wrapper for legacy route."""

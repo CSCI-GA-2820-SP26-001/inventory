@@ -5,6 +5,12 @@ Test Factory to make fake objects for testing
 from datetime import datetime
 
 import factory
+from factory.fuzzy import FuzzyChoice
+from service.models import InventoryItem, Condition
+
+
+class InventoryItemFactory(factory.Factory):
+    """Creates fake inventory items for testing"""
 from factory.fuzzy import FuzzyChoice, FuzzyInteger
 
 from service.models import Inventory, ItemCondition
@@ -16,6 +22,12 @@ class InventoryFactory(factory.Factory):
     class Meta:  # pylint: disable=too-few-public-methods
         """Maps factory to data model"""
 
+        model = InventoryItem
+
+    id = factory.Sequence(lambda n: n)
+    name = factory.Faker("word")
+    condition = FuzzyChoice(list(Condition))
+    quantity = factory.Faker("pyint", min_value=0, max_value=500)
         model = Inventory
 
     id = factory.Sequence(lambda n: n)
