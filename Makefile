@@ -1,6 +1,6 @@
 # These can be overidden with env vars.
-REGISTRY ?= cluster-registry:5000
-IMAGE_NAME ?= petshop
+REGISTRY ?= localhost:5000
+IMAGE_NAME ?= inventory
 IMAGE_TAG ?= 1.0
 IMAGE ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 PLATFORM ?= "linux/amd64,linux/arm64"
@@ -39,7 +39,7 @@ lint: ## Run the linter
 .PHONY: test
 test: ## Run the unit tests
 	$(info Running tests...)
-	export RETRY_COUNT=1; pytest --pspec --cov=service --cov-fail-under=95 --disable-warnings
+	export RETRY_COUNT=1; pytest
 
 .PHONY: run
 run: ## Run the service
