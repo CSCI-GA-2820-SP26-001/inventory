@@ -25,6 +25,7 @@ pytest-cov = "~=7.0.0"
 factory-boy = "~=3.3.3"
 coverage = "~=7.13.2"
 behave = "~=1.2.6"
+selenium = "*"
 
 # Utility
 honcho = "~=2.0.0"

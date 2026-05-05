@@ -1,29 +1,3 @@
-"""
-Inventory Service
-
-This service implements a REST API for managing inventory items.
-"""
-
-from flask import jsonify, render_template
-from flask import current_app as app
-from service.models import InventoryItem
-from service.common import status
-######################################################################
-# Copyright 2016, 2024 John J. Rofrano. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-######################################################################
-
 """Inventory service routes and Flask-RESTX resources."""
 
 from flask import Response, abort, jsonify, render_template, request
@@ -44,13 +18,6 @@ api = Api(
 inventory_ns = Namespace("inventory", description="Inventory operations", path="/inventory")
 api.add_namespace(inventory_ns)
 
-######################################################################
-# GET INDEX
-######################################################################
-@app.route("/")
-def index():
-    """Serve the inventory management UI"""
-    return render_template("index.html")
 
 def _parse_low_stock_flag(raw: str | None) -> bool:
     """Return True when the low_stock query param requests the low-stock filter."""
@@ -328,15 +295,6 @@ def delete_inventory_item(inventory_id):
     return _delete_inventory_impl(inventory_id)
 
 
-
-@app.route("/api/inventory", methods=["GET"])
-def list_inventory():
-    """Returns all inventory items"""
-    app.logger.info("Request to list all inventory items")
-    items = InventoryItem.all()
-    results = [item.serialize() for item in items]
-    app.logger.info("Returning %d inventory items", len(results))
-    return jsonify(results), status.HTTP_200_OK
 @app.route("/inventory/<int:inventory_id>/restock", methods=["PUT"])
 def restock_inventory(inventory_id):
     """Compatibility wrapper for legacy route."""
