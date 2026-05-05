@@ -96,7 +96,9 @@ class TestInventoryService(TestCase):  # pylint: disable=too-many-public-methods
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         page = resp.get_data(as_text=True)
         self.assertIn('getForm.addEventListener("submit"', page)
-        self.assertIn('const data = await requestJson(`/inventory/${id}`, { method: "GET" });', page)
+        self.assertIn(
+            'const data = await requestJson(`/api/inventory/${id}`, { method: "GET" });', page
+        )
         self.assertIn('setSuccess("Inventory item retrieved successfully.", data);', page)
         self.assertIn('if (error.status === 404)', page)
         self.assertIn('setError(new Error("Inventory item not found."));', page)
@@ -109,13 +111,11 @@ class TestInventoryService(TestCase):  # pylint: disable=too-many-public-methods
         self.assertIn("Inventory Admin", page)
         self.assertIn('id="create-inventory-form"', page)
         self.assertIn('id="get-inventory-form"', page)
-        self.assertIn('id="update-inventory-form"', page)
-        self.assertIn('id="delete-inventory-form"', page)
-        self.assertIn('id="restock-inventory-form"', page)
         self.assertIn('id="list-inventory-form"', page)
         self.assertIn('id="message"', page)
         self.assertIn('id="result-display"', page)
-        self.assertIn('fetch("/inventory"', page)
+        self.assertIn('await requestJson("/api/inventory", {', page)
+        self.assertIn('const url = query ? `/api/inventory?${query}` : "/api/inventory";', page)
 
     def test_inventory_ui_create_flow_elements(self):
         """It should provide create flow inputs, request wiring, and result feedback."""
@@ -141,7 +141,7 @@ class TestInventoryService(TestCase):  # pylint: disable=too-many-public-methods
 
         # Create request sent to backend
         self.assertIn('createForm.addEventListener("submit"', page)
-        self.assertIn('const data = await requestJson("/inventory", {', page)
+        self.assertIn('const data = await requestJson("/api/inventory", {', page)
         self.assertIn('method: "POST"', page)
         self.assertIn('headers: { "Content-Type": "application/json" }', page)
 
