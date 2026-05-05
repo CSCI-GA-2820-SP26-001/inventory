@@ -15,7 +15,7 @@ DATABASE_URI = os.getenv("DATABASE_URI", "sqlite:///test.db")
 BASE_URL = "/inventory"
 
 
-class TestInventoryService(TestCase):
+class TestInventoryService(TestCase):  # pylint: disable=too-many-public-methods
     """REST API server tests for Inventory."""
 
     @classmethod

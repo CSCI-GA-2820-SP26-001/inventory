@@ -12,7 +12,7 @@ from tests.factories import InventoryFactory
 DATABASE_URI = os.getenv("DATABASE_URI", "sqlite:///test.db")
 
 
-class TestInventoryModel(TestCase):
+class TestInventoryModel(TestCase):  # pylint: disable=too-many-public-methods
     """Test cases for Inventory model."""
 
     @classmethod
