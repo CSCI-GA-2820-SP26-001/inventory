@@ -54,7 +54,7 @@ class TestErrorHandlers(TestCase):
             response, code = error_handlers.method_not_supported(err)
         self.assertEqual(code, status.HTTP_405_METHOD_NOT_ALLOWED)
         data = response.get_json()
-        self.assertEqual(data["error"], "Method not Allowed")
+        self.assertEqual(data["error"], "Method Not Allowed")
         self.assertEqual(data["status"], status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertIn("Method Not Allowed", data["message"])
 

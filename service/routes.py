@@ -26,15 +26,11 @@ from service.common import status
 
 """Inventory service routes and Flask-RESTX resources."""
 
-from flask import Response, abort, jsonify, request
+from flask import Response, abort, jsonify, render_template, request
 from flask import current_app as app
 from flask_restx import Api, Namespace, Resource
 
-from flask import jsonify, request, url_for, abort, render_template
-from flask import current_app as app  # Import Flask application
-from service.models import Inventory, DataValidationError, ItemCondition
 from service.common import status  # HTTP Status Codes
-from service.common import status
 from service.models import DataValidationError, Inventory, ItemCondition
 
 api = Api(

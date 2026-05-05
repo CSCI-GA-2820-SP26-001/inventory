@@ -261,6 +261,7 @@ class TestInventoryService(TestCase):
         self.assertIn('setSuccess("Inventory item retrieved successfully.", data);', page)
         self.assertIn('if (error.status === 404)', page)
         self.assertIn('setError(new Error("Inventory item not found."));', page)
+
     def test_inventory_ui_page(self):
         """It should serve the inventory admin UI with core operation controls."""
         resp = self.client.get("/ui")
