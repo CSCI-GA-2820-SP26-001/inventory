@@ -112,10 +112,14 @@ class TestInventoryService(TestCase):  # pylint: disable=too-many-public-methods
         self.assertIn('id="create-inventory-form"', page)
         self.assertIn('id="get-inventory-form"', page)
         self.assertIn('id="list-inventory-form"', page)
+        self.assertIn('id="update-inventory-form"', page)
+        self.assertIn('id="delete-inventory-form"', page)
+        self.assertIn('id="restock-inventory-form"', page)
         self.assertIn('id="message"', page)
         self.assertIn('id="result-display"', page)
         self.assertIn('await requestJson("/api/inventory", {', page)
         self.assertIn('const url = query ? `/api/inventory?${query}` : "/api/inventory";', page)
+        self.assertIn('`/api/inventory/${id}/restock`', page)
 
     def test_inventory_ui_create_flow_elements(self):
         """It should provide create flow inputs, request wiring, and result feedback."""

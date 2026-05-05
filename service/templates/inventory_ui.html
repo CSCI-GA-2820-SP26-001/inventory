@@ -76,6 +76,49 @@
                 <button id="list-button" type="submit">List</button>
             </form>
         </section>
+
+        <section class="card">
+            <h2>Update Item</h2>
+            <form id="update-inventory-form">
+                <label for="update-id">Inventory ID</label>
+                <input id="update-id" type="number" min="1" required>
+                <label for="update-name">Name</label>
+                <input id="update-name" type="text" required>
+                <label for="update-product_id">Product ID</label>
+                <input id="update-product_id" type="text" required>
+                <label for="update-quantity_on_hand">Quantity On Hand</label>
+                <input id="update-quantity_on_hand" type="number" min="0" required>
+                <label for="update-restock_level">Restock Level</label>
+                <input id="update-restock_level" type="number" min="0" required>
+                <label for="update-condition">Condition</label>
+                <select id="update-condition" required>
+                    <option value="new">new</option>
+                    <option value="open_box">open_box</option>
+                    <option value="used">used</option>
+                </select>
+                <button id="update-button" type="submit">Update</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Delete Item</h2>
+            <form id="delete-inventory-form">
+                <label for="delete-id">Inventory ID</label>
+                <input id="delete-id" type="number" min="1" required>
+                <button id="delete-button" type="submit">Delete</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Restock Item</h2>
+            <form id="restock-inventory-form">
+                <label for="restock-id">Inventory ID</label>
+                <input id="restock-id" type="number" min="1" required>
+                <label for="restock-amount">Amount</label>
+                <input id="restock-amount" type="number" min="1" required>
+                <button id="restock-button" type="submit">Restock</button>
+            </form>
+        </section>
     </div>
 
     <div id="message" class="message" role="status" aria-live="polite"></div>
@@ -86,6 +129,9 @@
         const createForm = document.getElementById("create-inventory-form");
         const getForm = document.getElementById("get-inventory-form");
         const listForm = document.getElementById("list-inventory-form");
+        const updateForm = document.getElementById("update-inventory-form");
+        const deleteForm = document.getElementById("delete-inventory-form");
+        const restockForm = document.getElementById("restock-inventory-form");
         const messageEl = document.getElementById("message");
         const resultDisplayEl = document.getElementById("result-display");
 
@@ -108,7 +154,14 @@
         async function requestJson(url, options) {
             const response = await fetch(url, options);
             const responseText = await response.text();
-            const responseData = responseText ? JSON.parse(responseText) : null;
+            let responseData = null;
+            if (responseText) {
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = { message: responseText };
+                }
+            }
             if (!response.ok) {
                 const message = responseData && responseData.message
                     ? responseData.message
@@ -197,6 +250,66 @@
                 }
             } catch (error) {
                 setError(error);
+            }
+        });
+
+        updateForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            clearMessage();
+            const id = Number(document.getElementById("update-id").value);
+            const payload = {
+                name: document.getElementById("update-name").value.trim(),
+                product_id: document.getElementById("update-product_id").value.trim(),
+                quantity_on_hand: Number(document.getElementById("update-quantity_on_hand").value),
+                restock_level: Number(document.getElementById("update-restock_level").value),
+                condition: document.getElementById("update-condition").value
+            };
+            try {
+                const data = await requestJson(`/api/inventory/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                setSuccess("Inventory item updated successfully.", data);
+            } catch (error) {
+                if (error.status === 404) {
+                    setError(new Error("Inventory item not found."));
+                } else {
+                    setError(error);
+                }
+            }
+        });
+
+        deleteForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            clearMessage();
+            const id = Number(document.getElementById("delete-id").value);
+            try {
+                await requestJson(`/api/inventory/${id}`, { method: "DELETE" });
+                setSuccess(`Inventory id ${id} deleted (or was already absent).`, null);
+            } catch (error) {
+                setError(error);
+            }
+        });
+
+        restockForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            clearMessage();
+            const id = Number(document.getElementById("restock-id").value);
+            const amount = Number(document.getElementById("restock-amount").value);
+            try {
+                const data = await requestJson(`/api/inventory/${id}/restock`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ amount })
+                });
+                setSuccess("Inventory restocked successfully.", data);
+            } catch (error) {
+                if (error.status === 404) {
+                    setError(new Error("Inventory item not found."));
+                } else {
+                    setError(error);
+                }
             }
         });
     </script>
