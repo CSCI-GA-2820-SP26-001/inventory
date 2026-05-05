@@ -21,7 +21,7 @@ spec:
     - name: base-url
       default: http://inventory-route-inventory.apps.cluster.example.com
     - name: image
-      default: image-registry.openshift-image-registry.svc:5000/inventory/inventory:latest
+      default: image-registry.openshift-image-registry.svc:5000/prajanya-dev/inventory:latest
     - name: deployment-name
       default: inventory
     - name: container-name

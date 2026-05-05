@@ -55,20 +55,36 @@ spec:
     - name: IMAGE_URL
       description: Built image reference
   steps:
-    - name: build-and-push
-      image: quay.io/buildah/stable:v1.37.2
-      securityContext:
-        privileged: true
+    - name: write-auth
+      image: registry.access.redhat.com/ubi9/ubi-minimal:9.4
       workingDir: $(workspaces.source.path)
       script: |
         #!/usr/bin/env bash
         set -eu
-        buildah bud \
-          --format docker \
-          --file "$(params.DOCKERFILE)" \
-          --tag "$(params.IMAGE)" \
-          "$(params.CONTEXT)"
-        buildah push "$(params.IMAGE)" "docker://$(params.IMAGE)"
+        REGISTRY="image-registry.openshift-image-registry.svc:5000"
+        AUTH_DIR="/tekton/home/.docker"
+        mkdir -p "${AUTH_DIR}"
+        AUTH_B64="$(printf 'pipeline:%s' "$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" | base64 | tr -d '\n')"
+        cat > "${AUTH_DIR}/config.json" <<EOF
+        {"auths":{"${REGISTRY}":{"auth":"${AUTH_B64}"}}}
+        EOF
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+      command:
+        - /kaniko/executor
+      args:
+        - --context=$(workspaces.source.path)/$(params.CONTEXT)
+        - --dockerfile=$(workspaces.source.path)/$(params.DOCKERFILE)
+        - --destination=$(params.IMAGE)
+        - --insecure
+        - --skip-tls-verify
+    - name: write-result
+      image: registry.access.redhat.com/ubi9/ubi-minimal:9.4
+      script: |
+        #!/usr/bin/env bash
         printf "%s" "$(params.IMAGE)" > "$(results.IMAGE_URL.path)"
 ---
 apiVersion: tekton.dev/v1
@@ -89,14 +105,13 @@ spec:
     - name: source
   steps:
     - name: deploy
-      image: bitnami/kubectl:1.30.2
+      image: quay.io/openshift/origin-cli:4.15
       workingDir: $(workspaces.source.path)
       script: |
         #!/usr/bin/env sh
         set -eu
         kubectl apply -R -f k8s/
         kubectl set image "deployment/$(params.DEPLOYMENT_NAME)" "$(params.CONTAINER_NAME)=$(params.IMAGE)"
-        kubectl rollout status "deployment/$(params.DEPLOYMENT_NAME)" --timeout=180s
 ---
 apiVersion: tekton.dev/v1
 kind: Task
