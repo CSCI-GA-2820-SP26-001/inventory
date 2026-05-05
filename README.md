@@ -172,6 +172,44 @@ Kubernetes manifests are included for both the application and PostgreSQL:
 - `k8s/postgres/service.yaml` - Headless Service for PostgreSQL
 - `k8s/postgres/pvc.yaml` - PersistentVolumeClaim for PostgreSQL data
 
+## Tekton CD Pipeline (Requirement 6)
+
+This repository now includes starter Tekton artifacts in `.tekton/`:
+
+- `.tekton/workspace.yaml` - PVC for shared pipeline workspace
+- `.tekton/tasks.yaml` - custom tasks for lint, test, build, deploy, and BDD checks
+- `.tekton/pipeline.yaml` - full CD pipeline definition (clone -> lint/test in parallel -> build -> deploy -> BDD)
+- `.tekton/triggers.yaml` - TriggerBinding, TriggerTemplate, and EventListener for GitHub push webhooks
+- Includes an OpenShift `Route` for the EventListener service (`inventory-listener`)
+- `.tekton/README.md` - step-by-step OpenShift apply, webhook, test payload, and troubleshooting runbook
+
+To apply these resources to an OpenShift/Tekton cluster:
+
+```bash
+kubectl apply -f .tekton/workspace.yaml
+kubectl apply -f .tekton/tasks.yaml
+kubectl apply -f .tekton/pipeline.yaml
+kubectl apply -f .tekton/triggers.yaml
+```
+
+### OpenShift values to customize
+
+Before using the webhook trigger, update the defaults in `.tekton/triggers.yaml`:
+
+- `base-url`: your deployed service public route (used by BDD task)
+- `image`: your OpenShift internal registry image path
+- optionally `deployment-name` and `container-name` if they differ from `inventory`
+
+Then expose and capture the EventListener URL:
+
+```bash
+oc get route inventory-listener -o jsonpath='{.spec.host}{"\n"}'
+```
+
+Use that host in your GitHub webhook as:
+
+`http://<event-listener-host>`
+
 ## License
 
 Copyright (c) 2016, 2025 [John Rofrano](https://www.linkedin.com/in/JohnRofrano/). All rights reserved.

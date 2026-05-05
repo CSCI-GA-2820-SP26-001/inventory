@@ -1,0 +1,85 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: inventory-binding
+spec:
+  params:
+    - name: git-revision
+      value: $(body.ref)
+    - name: git-repo-url
+      value: $(body.repository.clone_url)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: inventory-template
+spec:
+  params:
+    - name: git-revision
+      default: refs/heads/master
+    - name: git-repo-url
+    - name: base-url
+      default: http://inventory-route-inventory.apps.cluster.example.com
+    - name: image
+      default: image-registry.openshift-image-registry.svc:5000/inventory/inventory:latest
+    - name: deployment-name
+      default: inventory
+    - name: container-name
+      default: inventory
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: inventory-cd-run-
+      spec:
+        pipelineRef:
+          name: inventory-cd-pipeline
+        params:
+          - name: repo-url
+            value: $(tt.params.git-repo-url)
+          - name: revision
+            value: $(tt.params.git-revision)
+          - name: base-url
+            value: $(tt.params.base-url)
+          - name: image
+            value: $(tt.params.image)
+          - name: deployment-name
+            value: $(tt.params.deployment-name)
+          - name: container-name
+            value: $(tt.params.container-name)
+        workspaces:
+          - name: shared-workspace
+            persistentVolumeClaim:
+              claimName: pipeline-workspace
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: inventory-listener
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: github-master-push
+      interceptors:
+        - ref:
+            name: github
+          params:
+            - name: eventTypes
+              value:
+                - push
+      bindings:
+        - ref: inventory-binding
+      template:
+        ref: inventory-template
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: inventory-listener
+spec:
+  to:
+    kind: Service
+    name: el-inventory-listener
+    weight: 100
+  port:
+    targetPort: http-listener

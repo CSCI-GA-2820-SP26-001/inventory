@@ -1,0 +1,120 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: lint
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: lint
+      image: python:3.12-slim
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -e
+        pip install --upgrade pip pipenv
+        pipenv install --dev --deploy
+        pipenv run flake8 service tests
+        pipenv run pylint service tests --max-line-length=127
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: test
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: test
+      image: python:3.12-slim
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -e
+        pip install --upgrade pip pipenv
+        pipenv install --dev --deploy
+        DATABASE_URI=sqlite:///test.db pipenv run pytest -q -o addopts=''
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: build-image
+spec:
+  params:
+    - name: IMAGE
+      type: string
+    - name: CONTEXT
+      type: string
+      default: .
+    - name: DOCKERFILE
+      type: string
+      default: ./Dockerfile
+  workspaces:
+    - name: source
+  results:
+    - name: IMAGE_URL
+      description: Built image reference
+  steps:
+    - name: build-and-push
+      image: quay.io/buildah/stable:v1.37.2
+      securityContext:
+        privileged: true
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -eu
+        buildah bud \
+          --format docker \
+          --file "$(params.DOCKERFILE)" \
+          --tag "$(params.IMAGE)" \
+          "$(params.CONTEXT)"
+        buildah push "$(params.IMAGE)" "docker://$(params.IMAGE)"
+        printf "%s" "$(params.IMAGE)" > "$(results.IMAGE_URL.path)"
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy
+spec:
+  params:
+    - name: IMAGE
+      type: string
+    - name: DEPLOYMENT_NAME
+      type: string
+      default: inventory
+    - name: CONTAINER_NAME
+      type: string
+      default: inventory
+  workspaces:
+    - name: source
+  steps:
+    - name: deploy
+      image: bitnami/kubectl:1.30.2
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        kubectl apply -R -f k8s/
+        kubectl set image "deployment/$(params.DEPLOYMENT_NAME)" "$(params.CONTAINER_NAME)=$(params.IMAGE)"
+        kubectl rollout status "deployment/$(params.DEPLOYMENT_NAME)" --timeout=180s
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: bdd-test
+spec:
+  params:
+    - name: BASE_URL
+      type: string
+  workspaces:
+    - name: source
+  steps:
+    - name: bdd
+      image: python:3.12-slim
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env bash
+        set -e
+        pip install --upgrade pip pipenv
+        pipenv install --dev --deploy
+        BASE_URL="$(params.BASE_URL)" DATABASE_URI=sqlite:///test.db pipenv run behave features/ui_smoke.feature

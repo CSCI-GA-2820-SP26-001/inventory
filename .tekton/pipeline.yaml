@@ -1,0 +1,109 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: inventory-cd-pipeline
+spec:
+  params:
+    - name: repo-url
+      type: string
+    - name: revision
+      type: string
+      default: master
+    - name: image
+      type: string
+      default: image-registry.openshift-image-registry.svc:5000/inventory/inventory:latest
+    - name: deployment-name
+      type: string
+      default: inventory
+    - name: container-name
+      type: string
+      default: inventory
+    - name: base-url
+      type: string
+      description: Public route for running BDD checks
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: clone
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: namespace
+            value: openshift-pipelines
+          - name: name
+            value: git-clone
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.revision)
+        - name: deleteExisting
+          value: "true"
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    - name: lint
+      runAfter:
+        - clone
+      taskRef:
+        name: lint
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: test
+      runAfter:
+        - clone
+      taskRef:
+        name: test
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-image
+      runAfter:
+        - lint
+        - test
+      taskRef:
+        name: build-image
+      params:
+        - name: IMAGE
+          value: $(params.image)
+        - name: CONTEXT
+          value: .
+        - name: DOCKERFILE
+          value: ./Dockerfile
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: deploy
+      runAfter:
+        - build-image
+      taskRef:
+        name: deploy
+      params:
+        - name: IMAGE
+          value: $(params.image)
+        - name: DEPLOYMENT_NAME
+          value: $(params.deployment-name)
+        - name: CONTAINER_NAME
+          value: $(params.container-name)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: bdd-test
+      runAfter:
+        - deploy
+      taskRef:
+        name: bdd-test
+      params:
+        - name: BASE_URL
+          value: $(params.base-url)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
