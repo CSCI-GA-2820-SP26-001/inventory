@@ -18,6 +18,7 @@ api = Api(
 inventory_ns = Namespace("inventory", description="Inventory operations", path="/inventory")
 api.add_namespace(inventory_ns)
 
+
 def _parse_low_stock_flag(raw: str | None) -> bool:
     """Return True when the low_stock query param requests the low-stock filter."""
     if raw is None:

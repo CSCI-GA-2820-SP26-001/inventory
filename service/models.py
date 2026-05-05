@@ -6,6 +6,8 @@ from enum import Enum
 from flask_sqlalchemy import SQLAlchemy
 
 logger = logging.getLogger("flask.app")
+
+# Create the SQLAlchemy object to be initialized later in init_db()
 db = SQLAlchemy()
 
 
@@ -43,19 +45,24 @@ class Inventory(db.Model):
     def create(self):
         """Persist a new Inventory record to the database."""
         self.id = None
+        logger.info("Creating %s", self.name)
+        self.id = None  # pylint: disable=invalid-name
         try:
             db.session.add(self)
             db.session.commit()
         except Exception as error:  # pylint: disable=broad-except
             db.session.rollback()
+            logger.error("Error creating record: %s", self)
             raise DataValidationError(error) from error
 
     def update(self):
         """Persist changes to this Inventory record."""
+        logger.info("Saving %s", self.name)
         try:
             db.session.commit()
         except Exception as error:  # pylint: disable=broad-except
             db.session.rollback()
+            logger.error("Error updating record: %s", self)
             raise DataValidationError(error) from error
 
     def delete(self):
@@ -65,6 +72,7 @@ class Inventory(db.Model):
             db.session.commit()
         except Exception as error:  # pylint: disable=broad-except
             db.session.rollback()
+            logger.error("Error deleting record: %s", self)
             raise DataValidationError(error) from error
 
     def serialize(self):
@@ -96,34 +104,51 @@ class Inventory(db.Model):
             raise DataValidationError("Invalid Inventory: missing " + error.args[0]) from error
         except TypeError as error:
             raise DataValidationError("Invalid Inventory: bad or no data " + str(error)) from error
+            raise DataValidationError(
+                "Invalid Inventory: missing " + error.args[0]
+            ) from error
+        except TypeError as error:
+            raise DataValidationError(
+                "Invalid Inventory: body of request contained bad or no data "
+                + str(error)
+            ) from error
         return self
 
     @classmethod
     def all(cls):
         """Return all Inventory rows in the database."""
+        logger.info("Processing all Inventory records")
         return cls.query.all()
 
     @classmethod
     def find(cls, by_id):
         """Find an Inventory row by ID."""
+        """Find an Inventory record by its ID."""
+        logger.info("Processing lookup for id %s ...", by_id)
         return cls.query.session.get(cls, by_id)
 
     @classmethod
     def find_by_name(cls, name):
         """Return all Inventory rows with the given name."""
+        logger.info("Processing name query for %s ...", name)
         return cls.query.filter(cls.name == name)
 
     @classmethod
     def find_low_stock(cls):
         """Return rows where quantity_on_hand <= restock_level."""
+        """Return rows where quantity_on_hand is at or below restock_level."""
+        logger.info("Processing low stock query ...")
         return cls.query.filter(cls.quantity_on_hand <= cls.restock_level).all()
 
     @classmethod
     def find_by_product_id(cls, product_id: str):
         """Return all Inventory rows with the given product_id."""
+        logger.info("Processing product_id query for %s ...", product_id)
         return cls.query.filter(cls.product_id == product_id).all()
 
     @classmethod
     def find_by_condition(cls, condition: ItemCondition):
         """Return all Inventory rows with the given condition."""
+        """Return all Inventory rows matching the given item condition."""
+        logger.info("Processing condition query for %s ...", condition.value)
         return cls.query.filter(cls.condition == condition).all()
