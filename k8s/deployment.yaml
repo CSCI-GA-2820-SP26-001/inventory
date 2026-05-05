@@ -17,7 +17,9 @@ spec:
       containers:
         - name: inventory
           image: cluster-registry:5000/inventory:1.0
-          imagePullPolicy: IfNotPresent
+          # Always pull :latest (and internal registry tags) so pipeline deploys
+          # actually pick up newly pushed images instead of stale node cache.
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
