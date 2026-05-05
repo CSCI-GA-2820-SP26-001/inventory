@@ -44,6 +44,7 @@ class Inventory(db.Model):
 
     def create(self):
         """Persist a new Inventory record to the database."""
+        self.id = None
         logger.info("Creating %s", self.name)
         self.id = None  # pylint: disable=invalid-name
         try:
@@ -66,7 +67,6 @@ class Inventory(db.Model):
 
     def delete(self):
         """Remove this Inventory record from the database."""
-        logger.info("Deleting %s", self.name)
         try:
             db.session.delete(self)
             db.session.commit()
@@ -101,6 +101,9 @@ class Inventory(db.Model):
         except AttributeError as error:
             raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:
+            raise DataValidationError("Invalid Inventory: missing " + error.args[0]) from error
+        except TypeError as error:
+            raise DataValidationError("Invalid Inventory: bad or no data " + str(error)) from error
             raise DataValidationError(
                 "Invalid Inventory: missing " + error.args[0]
             ) from error
@@ -119,6 +122,7 @@ class Inventory(db.Model):
 
     @classmethod
     def find(cls, by_id):
+        """Find an Inventory row by ID."""
         """Find an Inventory record by its ID."""
         logger.info("Processing lookup for id %s ...", by_id)
         return cls.query.session.get(cls, by_id)
@@ -131,6 +135,7 @@ class Inventory(db.Model):
 
     @classmethod
     def find_low_stock(cls):
+        """Return rows where quantity_on_hand <= restock_level."""
         """Return rows where quantity_on_hand is at or below restock_level."""
         logger.info("Processing low stock query ...")
         return cls.query.filter(cls.quantity_on_hand <= cls.restock_level).all()
@@ -143,6 +148,7 @@ class Inventory(db.Model):
 
     @classmethod
     def find_by_condition(cls, condition: ItemCondition):
+        """Return all Inventory rows with the given condition."""
         """Return all Inventory rows matching the given item condition."""
         logger.info("Processing condition query for %s ...", condition.value)
         return cls.query.filter(cls.condition == condition).all()
