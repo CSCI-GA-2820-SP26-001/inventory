@@ -443,7 +443,7 @@
           <input id="delete-id" name="id" type="number" min="1" required>
         </div>
         <div class="full-width">
-          <button type="submit">Delete</button>
+          <button id="delete-btn" type="submit" disabled>Delete</button>
         </div>
       </form>
     </section>
@@ -564,8 +564,11 @@
         try {
           const data = await requestJson(`/inventory/${inventoryId}`);
           setSuccess("Inventory item retrieved successfully.", data);
+          document.getElementById("delete-id").value = inventoryId;
+          document.getElementById("delete-btn").disabled = false;
         } catch (error) {
           setError(error.message);
+          document.getElementById("delete-btn").disabled = true;
         }
       });
 
@@ -599,7 +602,11 @@
           await requestJson(`/inventory/${inventoryId}`, {
             method: "DELETE"
           });
-          setSuccess("Inventory item deleted successfully.", { id: Number(inventoryId) });
+          document.getElementById("delete-id").value = "";
+          document.getElementById("get-id").value = "";
+          setSuccess("Inventory item deleted successfully.");
+          document.getElementById("delete-btn").disabled = true;
+          resultEl.textContent = "No results yet.";
         } catch (error) {
           setError(error.message);
         }
