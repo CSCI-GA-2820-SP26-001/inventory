@@ -4,7 +4,7 @@ Behave environment setup for BDD tests
 
 import os
 from wsgi import app
-from service.models import db, InventoryItem
+from service.models import Inventory, db
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -28,7 +28,7 @@ def after_all(context):
 
 
 def before_scenario(context, scenario):
-    db.session.query(InventoryItem).delete()
+    db.session.query(Inventory).delete()
     db.session.commit()
 
 

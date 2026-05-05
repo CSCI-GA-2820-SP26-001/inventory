@@ -3,12 +3,12 @@ BDD Steps for List All Inventory feature
 """
 
 from behave import given, when, then
-from service.models import InventoryItem, Condition, db
+from service.models import Inventory, ItemCondition, db
 
 CONDITION_MAP = {
-    "new": Condition.NEW,
-    "used": Condition.USED,
-    "open_box": Condition.OPEN_BOX,
+    "new": ItemCondition.NEW,
+    "used": ItemCondition.USED,
+    "open_box": ItemCondition.OPEN_BOX,
 }
 
 
@@ -19,17 +19,19 @@ def step_service_is_running(context):
 
 @given("the database is empty")
 def step_database_is_empty(context):
-    db.session.query(InventoryItem).delete()
+    db.session.query(Inventory).delete()
     db.session.commit()
 
 
 @given("the following inventory items exist")
 def step_inventory_items_exist(context):
     for row in context.table:
-        item = InventoryItem(
+        item = Inventory(
             name=row["name"],
+            product_id=f"BDD-{row['name']}",
             condition=CONDITION_MAP[row["condition"]],
-            quantity=int(row["quantity"]),
+            quantity_on_hand=int(row["quantity"]),
+            restock_level=1,
         )
         item.create()
 
